@@ -56,14 +56,12 @@ func runGenerate(cmd *cobra.Command, args []string) {
 	entityFilePath := args[0]
 	fmt.Printf("🔍 开始解析实体文件: %s\n", entityFilePath)
 
-	// 1. 获取项目模块路径
 	module, err := getProjectModule()
 	if err != nil {
 		fmt.Printf("   获取项目 module 失败: %v\n", err)
 		return // 正确：错误检查
 	}
 
-	// 2. 解析实体文件
 	info, err := parseEntityFile(entityFilePath, module)
 
 	if err != nil {
@@ -77,10 +75,8 @@ func runGenerate(cmd *cobra.Command, args []string) {
 
 	fmt.Printf(" ✓ 解析成功! 实体: %s, 表名: %s\n", info.EntityName, info.TableName)
 
-	// 3. 生成新的 repo, service, controller 文件
 	generateCode(info)
 
-	// 4. 自动修改现有文件以集成新代码
 	if err := addProviderToDI(info); err != nil {
 		fmt.Printf("   自动修改 di/container.go 失败: %v\n", err)
 		return
@@ -94,12 +90,10 @@ func runGenerate(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	// 5. 格式化所有被修改的文件
 	formatFile("internal/di/container.go")
 	formatFile("internal/router/router.go")
 
-	// 6. 打印最终的、简化的指南
-	printNextSteps(info) // 现在 info 肯定不是 nil
+	printNextSteps(info)
 }
 
 func generateCode(info *EntityInfo) {
@@ -122,10 +116,10 @@ func generateCode(info *EntityInfo) {
 
 		if _, err := os.Stat(fileName); err == nil {
 			if !forceGenerate {
-				fmt.Printf("     ⚠️ 文件已存在，跳过生成。请使用 -F 或 --force 选项来覆盖。\n")
+				fmt.Printf("  文件已存在，跳过生成。请使用 -F 或 --force 选项来覆盖。\n")
 				continue
 			}
-			fmt.Printf("     🔥 文件已存在，正在强制覆盖...\n")
+			fmt.Printf("  文件已存在，正在强制覆盖...\n")
 		} else if !os.IsNotExist(err) {
 			fmt.Printf("  检查文件 %s 状态时出错: %v\n", fileName, err)
 			continue
@@ -154,7 +148,7 @@ func generateCode(info *EntityInfo) {
 			fmt.Printf("  写入文件 %s 失败: %v\n", fileName, err)
 		} else {
 			// 只有成功写入才打印成功信息
-			fmt.Printf("     ✅ 成功生成文件: %s\n", fileName)
+			fmt.Printf("  成功生成文件: %s\n", fileName)
 		}
 	}
 }
@@ -250,7 +244,7 @@ func parseEntityFile(filePath, projectModule string) (*EntityInfo, error) {
 	}
 	if info.TableName == "" {
 		info.TableName = toSnakeCase(info.EntityName) + "s"
-		fmt.Printf("⚠️ 未找到 TableName() 方法, 将使用默认表名: %s\n", info.TableName)
+		fmt.Printf("未找到 TableName() 方法, 将使用默认表名: %s\n", info.TableName)
 	}
 
 	return info, nil
