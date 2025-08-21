@@ -60,27 +60,29 @@ func createProject(projectName string) {
 		ProjectModule: projectName,
 		AppName:       filepath.Base(projectName),
 	}
-	fmt.Printf("🚀 开始初始化项目: %s\n", project.ProjectModule)
+	// 将项目创建的日志消息更新，以反映新架构
+	fmt.Printf("🚀 开始初始化实用的整洁架构项目: %s\n", project.ProjectModule)
 
+	// 注意：文件模板的输出路径已更新为新结构
 	templates := []fileTemplate{
 		{SourcePath: "tmpl/go.mod.tmpl", OutputPath: "go.mod"},
 		{SourcePath: "tmpl/main.go.tmpl", OutputPath: "cmd/" + project.AppName + "/main.go"},
 		{SourcePath: "tmpl/config.yaml.tmpl", OutputPath: "config.yaml"},
 		{SourcePath: "tmpl/gitignore.tmpl", OutputPath: ".gitignore"},
 		{SourcePath: "tmpl/configuration/config.go.tmpl", OutputPath: "internal/configuration/config.go"},
-		{SourcePath: "tmpl/db/db.go.tmpl", OutputPath: "internal/db/db.go"},
-		{SourcePath: "tmpl/router/router.go.tmpl", OutputPath: "internal/router/router.go"},
+		{SourcePath: "tmpl/db/db.go.tmpl", OutputPath: "internal/adapter/repository/db.go"},
+		{SourcePath: "tmpl/router/router.go.tmpl", OutputPath: "internal/adapter/router/router.go"},
 		{SourcePath: "tmpl/di/container.go.tmpl", OutputPath: "internal/di/container.go"},
 	}
 
-	if err := os.Mkdir(project.ProjectModule, 0o755); err != nil {
+	if err := os.Mkdir(project.ProjectModule, 0755); err != nil {
 		fmt.Printf("创建项目目录失败: %s\n", err)
 		return
 	}
 
 	for _, t := range templates {
 		outputDir := filepath.Dir(filepath.Join(project.ProjectModule, t.OutputPath))
-		if err := os.MkdirAll(outputDir, 0o755); err != nil {
+		if err := os.MkdirAll(outputDir, 0755); err != nil {
 			fmt.Printf("创建子目录 '%s' 失败: %s\n", outputDir, err)
 			return
 		}
@@ -88,16 +90,16 @@ func createProject(projectName string) {
 	}
 
 	emptyDirs := []string{
-		"internal/entity",
-		"internal/model",
-		"internal/repository",
-		"internal/service",
-		"internal/handler",
-		"internal/middleware",
+		"internal/domain/entity",
+		"internal/domain/ports",
+		"internal/usecase/service",
+		"internal/adapter/handler",
+		"internal/adapter/dto",
+		"internal/adapter/middleware",
 	}
 	for _, dir := range emptyDirs {
 		fullPath := filepath.Join(projectName, dir)
-		if err := os.MkdirAll(fullPath, 0o755); err != nil {
+		if err := os.MkdirAll(fullPath, 0755); err != nil {
 			fmt.Printf("创建空目录 '%s' 失败: %s\n", dir, err)
 		} else {
 			fmt.Printf(" ✓ 创建目录: %s\n", fullPath)

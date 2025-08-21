@@ -96,16 +96,16 @@ func runGenerate(cmd *cobra.Command, args []string) {
 			},
 		}
 	} else {
-		fmt.Println("   检测到标准分层项目结构")
+		fmt.Println("   检测到整洁架构")
 		paths = PathConfig{
 			IsDDD:              false,
 			DIFile:             "internal/di/container.go",
-			RouterFile:         "internal/router/router.go",
-			HandlerPackagePath: "/internal/handler",
+			RouterFile:         "internal/adapter/router/router.go",
+			HandlerPackagePath: "/internal/adapter/handler",
 			DIImports: []string{
-				"/internal/repository",
-				"/internal/service",
-				"/internal/handler",
+				"/internal/adapter/repository",
+				"/internal/usecase/service",
+				"/internal/adapter/handler",
 			},
 		}
 	}
@@ -156,10 +156,11 @@ func generateCode(info *EntityInfo, paths PathConfig) {
 		}
 	} else {
 		tasks = []FileGenerationTask{
-			{TemplatePath: "tmpl/generate/dto.go.tmpl", OutputDir: "internal/model", FileName: toSnakeCase(info.EntityName), IsSingular: true},
-			{TemplatePath: "tmpl/generate/repository.go.tmpl", OutputDir: "internal/repository", Suffix: "_repository"},
-			{TemplatePath: "tmpl/generate/service.go.tmpl", OutputDir: "internal/service", Suffix: "_service"},
-			{TemplatePath: "tmpl/generate/handler.go.tmpl", OutputDir: "internal/handler", Suffix: "_handler"},
+			{TemplatePath: "tmpl/generate/dto.go.tmpl", OutputDir: "internal/adapter/dto", FileName: toSnakeCase(info.EntityName), IsSingular: true},
+			{TemplatePath: "tmpl/generate/repository_interface.go.tmpl", OutputDir: "internal/domain/ports", Suffix: "_repository"},
+			{TemplatePath: "tmpl/generate/repository_impl.go.tmpl", OutputDir: "internal/adapter/repository", Suffix: "_repository_impl"},
+			{TemplatePath: "tmpl/generate/service.go.tmpl", OutputDir: "internal/usecase/service", Suffix: "_service"},
+			{TemplatePath: "tmpl/generate/handler.go.tmpl", OutputDir: "internal/adapter/handler", Suffix: "_handler"},
 		}
 	}
 

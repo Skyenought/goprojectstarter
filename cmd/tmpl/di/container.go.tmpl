@@ -4,9 +4,20 @@ import (
 	"{{.ProjectModule}}/internal/configuration"
 	"{{.ProjectModule}}/internal/db"
 	"{{.ProjectModule}}/internal/router"
+	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v3"
 	"go.uber.org/dig"
 )
+
+// structValidator is a custom validator that implements fiber.StructValidator
+type structValidator struct {
+	validate *validator.Validate
+}
+
+// Validate implements the fiber.StructValidator interface.
+func (v *structValidator) Validate(out any) error {
+	return v.validate.Struct(out)
+}
 
 // BuildContainer now only takes config as a parameter.
 func BuildContainer(config *configuration.Config) (*dig.Container, error) {
@@ -18,13 +29,13 @@ func BuildContainer(config *configuration.Config) (*dig.Container, error) {
 	}
 
 	// Create a new provider that extracts the dbType from the config.
-	// Dig will automatically use this to satisfy db.NewDatabase's string dependency.
 	if err := container.Provide(provideDbType); err != nil {
 		return nil, err
 	}
 
 	providers := []interface{}{
 		provideFiberApp,
+		provideValidator,
 		db.NewDatabase,
 		db.Connect,
 		router.NewRouter,
@@ -46,6 +57,14 @@ func provideDbType(config *configuration.Config) string {
 	return config.Database.Type
 }
 
-func provideFiberApp() *fiber.App {
-	return fiber.New()
+// provideFiberApp creates a new Fiber app and sets up the custom struct validator.
+func provideFiberApp(validate *validator.Validate) *fiber.App {
+	return fiber.New(fiber.Config{
+		StructValidator: &structValidator{validate: validate},
+	})
+}
+
+// provideValidator provides a singleton instance of the validator.
+func provideValidator() *validator.Validate {
+	return validator.New()
 }

@@ -12,7 +12,15 @@ type {{.LowerEntityName}}RepositoryImpl struct {
 
 // New{{.EntityName}}Repository 创建一个新的 GORM {{.EntityName}} 仓库实现
 func New{{.EntityName}}Repository(db *gorm.DB) repository.{{.EntityName}}Repository {
-	db.AutoMigrate(&entity.{{.EntityName}}{})
+	if !db.Migrator().HasTable(&entity.{{.EntityName}}{}) {
+		log.Printf("Table for '%s' not found, running AutoMigrate...", "{{.EntityName}}")
+
+		err := db.AutoMigrate(&entity.{{.EntityName}}{})
+		if err != nil {
+			panic(fmt.Sprintf("Failed to auto-migrate table for {{.EntityName}}: %v", err))
+		}
+		log.Printf("Table for '%s' created successfully.", "{{.EntityName}}")
+	}
 	return &{{.LowerEntityName}}RepositoryImpl{db: db}
 }
 

@@ -1,27 +1,27 @@
 package repository
 
 import (
-	"{{.ProjectModule}}/internal/entity"
+	"{{.ProjectModule}}/internal/domain/entity"
+	"{{.ProjectModule}}/internal/domain/ports"
 	"gorm.io/gorm"
 )
-
-// {{.EntityName}}Repository defines the interface for operations on {{.EntityName}}s.
-type {{.EntityName}}Repository interface {
-	Create(model *entity.{{.EntityName}}) error
-	FindAll() ([]entity.{{.EntityName}}, error)
-	FindByID(id {{.PrimaryKey.Type}}) (*entity.{{.EntityName}}, error)
-	Update(model *entity.{{.EntityName}}) error
-	Delete(id {{.PrimaryKey.Type}}) error
-}
 
 type {{.LowerEntityName}}RepositoryImpl struct {
 	db *gorm.DB
 }
 
-// New{{.EntityName}}Repository creates a new GORM {{.EntityName}} repository.
-func New{{.EntityName}}Repository(db *gorm.DB) {{.EntityName}}Repository {
-	// AutoMigrate the schema. In production, consider using a migration tool.
-	db.AutoMigrate(&entity.{{.EntityName}}{})
+// New{{.EntityName}}Repository 创建一个新的 GORM {{.EntityName}} 仓库实现
+func New{{.EntityName}}Repository(db *gorm.DB) repository.{{.EntityName}}Repository {
+	if !db.Migrator().HasTable(&entity.{{.EntityName}}{}) {
+		log.Printf("Table for '%s' not found, running AutoMigrate...", "{{.EntityName}}")
+
+		err := db.AutoMigrate(&entity.{{.EntityName}}{})
+		if err != nil {
+			panic(fmt.Sprintf("Failed to auto-migrate table for {{.EntityName}}: %v", err))
+		}
+		log.Printf("Table for '%s' created successfully.", "{{.EntityName}}")
+	}
+
 	return &{{.LowerEntityName}}RepositoryImpl{db: db}
 }
 
