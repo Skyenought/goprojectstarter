@@ -14,8 +14,8 @@ import (
 var projectTemplates embed.FS
 
 type Project struct {
-	ProjectModule string // 之前叫 Name，改成 ProjectModule 更清晰
-	AppName       string // 应用名称，用于 cmd/app-name
+	ProjectModule string
+	AppName       string
 }
 
 // fileTemplate 定义了模板源文件和其在目标项目中的输出路径
@@ -53,14 +53,14 @@ func createProject(projectName string) {
 		AppName:       filepath.Base(projectName),
 	}
 	fmt.Printf("🚀 开始初始化项目: %s\n", project.ProjectModule)
-	// 路径依然需要 "tmpl/" 前缀，因为 embed.FS 保留了目录结构
+
 	templates := []fileTemplate{
 		{SourcePath: "tmpl/go.mod.tmpl", OutputPath: "go.mod"},
 		// main.go 的新位置
 		{SourcePath: "tmpl/main.go.tmpl", OutputPath: "cmd/" + project.AppName + "/main.go"},
 		{SourcePath: "tmpl/config.yaml.tmpl", OutputPath: "config.yaml"},
 		{SourcePath: "tmpl/Dockerfile.tmpl", OutputPath: "Dockerfile"},
-		{SourcePath: "tmpl/.gitignore.tmpl", OutputPath: ".gitignore"},
+		{SourcePath: "tmpl/gitignore.tmpl", OutputPath: ".gitignore"},
 
 		{SourcePath: "tmpl/configuration/config.go.tmpl", OutputPath: "internal/configuration/config.go"},
 		{SourcePath: "tmpl/db/db.go.tmpl", OutputPath: "internal/db/db.go"},
@@ -69,14 +69,14 @@ func createProject(projectName string) {
 	}
 
 	if err := os.Mkdir(project.ProjectModule, 0755); err != nil {
-		fmt.Printf("❌ 创建项目目录失败: %s\n", err)
+		fmt.Printf("创建项目目录失败: %s\n", err)
 		return
 	}
 
 	for _, t := range templates {
 		outputDir := filepath.Dir(filepath.Join(project.ProjectModule, t.OutputPath))
 		if err := os.MkdirAll(outputDir, 0755); err != nil {
-			fmt.Printf("❌ 创建子目录 '%s' 失败: %s\n", outputDir, err)
+			fmt.Printf("创建子目录 '%s' 失败: %s\n", outputDir, err)
 			return
 		}
 		createFileFromTemplate(project, t.SourcePath, t.OutputPath)
@@ -93,13 +93,13 @@ func createProject(projectName string) {
 	for _, dir := range emptyDirs {
 		fullPath := filepath.Join(projectName, dir)
 		if err := os.MkdirAll(fullPath, 0755); err != nil {
-			fmt.Printf("❌ 创建空目录 '%s' 失败: %s\n", dir, err)
+			fmt.Printf("创建空目录 '%s' 失败: %s\n", dir, err)
 		} else {
 			fmt.Printf(" ✓ 创建目录: %s\n", fullPath)
 		}
 	}
 
-	fmt.Printf("\n🎉 项目 '%s' 初始化成功！\n", project.ProjectModule)
+	fmt.Printf("\n 项目 '%s' 初始化成功！\n", project.ProjectModule)
 	fmt.Println("👉 下一步:")
 	fmt.Printf("   1. cd %s\n", project.ProjectModule)
 	fmt.Println("   2. go mod tidy")
@@ -110,20 +110,20 @@ func createProject(projectName string) {
 func createFileFromTemplate(p Project, tmplPath, outputName string) {
 	tmpl, err := template.ParseFS(projectTemplates, tmplPath)
 	if err != nil {
-		fmt.Printf("❌ 读取嵌入的模板 '%s' 失败: %s\n", tmplPath, err)
+		fmt.Printf("读取嵌入的模板 '%s' 失败: %s\n", tmplPath, err)
 		return
 	}
 
 	outputPath := filepath.Join(p.ProjectModule, outputName)
 	file, err := os.Create(outputPath)
 	if err != nil {
-		fmt.Printf("❌ 创建文件 '%s' 失败: %s\n", outputPath, err)
+		fmt.Printf("创建文件 '%s' 失败: %s\n", outputPath, err)
 		return
 	}
 	defer file.Close()
 
 	if err := tmpl.Execute(file, p); err != nil {
-		fmt.Printf("❌ 渲染模板 '%s' 失败: %s\n", tmplPath, err)
+		fmt.Printf("渲染模板 '%s' 失败: %s\n", tmplPath, err)
 		return
 	}
 	fmt.Printf(" ✓ 创建文件: %s\n", outputPath)
