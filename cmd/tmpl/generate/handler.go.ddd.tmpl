@@ -1,8 +1,8 @@
 package handler
 
 import (
-	"{{.ProjectModule}}/internal/model"
-	"{{.ProjectModule}}/internal/service"
+	"{{.ProjectModule}}/internal/application/service"
+	"{{.ProjectModule}}/internal/interfaces/dto"
 	"github.com/gofiber/fiber/v3"
 )
 
@@ -22,13 +22,13 @@ func New{{.EntityName}}Handler(s service.{{.EntityName}}Service) *{{.EntityName}
 // @Tags         {{.EntityName}}
 // @Accept       json
 // @Produce      json
-// @Param        request body model.Create{{.EntityName}}Request true "创建请求"
-// @Success      201  {object}  model.{{.EntityName}}Response
+// @Param        request body dto.Create{{.EntityName}}Request true "创建请求"
+// @Success      201  {object}  dto.{{.EntityName}}Response
 // @Failure      400  {object}  map[string]string
 // @Failure      500  {object}  map[string]string
 // @Router       /{{.TableName}} [post]
 func (h *{{.EntityName}}Handler) Create(ctx fiber.Ctx) error {
-	var req model.Create{{.EntityName}}Request
+	var req dto.Create{{.EntityName}}Request
 	if err := ctx.Bind().JSON(&req); err != nil {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "无法解析请求体"})
 	}
@@ -49,7 +49,7 @@ func (h *{{.EntityName}}Handler) Create(ctx fiber.Ctx) error {
 // @Description  返回一个包含所有 {{.EntityName}} 记录的列表
 // @Tags         {{.EntityName}}
 // @Produce      json
-// @Success      200  {array}   model.{{.EntityName}}Response
+// @Success      200  {array}   dto.{{.EntityName}}Response
 // @Failure      500  {object}  map[string]string
 // @Router       /{{.TableName}} [get]
 func (h *{{.EntityName}}Handler) GetAll(ctx fiber.Ctx) error {
@@ -67,22 +67,23 @@ func (h *{{.EntityName}}Handler) GetAll(ctx fiber.Ctx) error {
 // @Tags         {{.EntityName}}
 // @Produce      json
 // @Param        id   path      {{.PrimaryKey.Type}}  true  "{{.EntityName}} ID"
-// @Success      200  {object}  model.{{.EntityName}}Response
+// @Success      200  {object}  dto.{{.EntityName}}Response
 // @Failure      400  {object}  map[string]string
 // @Failure      404  {object}  map[string]string
 // @Failure      500  {object}  map[string]string
 // @Router       /{{.TableName}}/{id} [get]
 func (h *{{.EntityName}}Handler) GetByID(ctx fiber.Ctx) error {
-	// 注意：这里的 ID 解析需要根据主键类型进行调整
-	// 例如，如果主键是 uint 或 int，可以使用 ctx.ParamsInt("id")
-	// 下面的示例适用于 string 类型的 ID
 	id := ctx.Params("id")
 	if id == "" {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "ID 不能为空"})
 	}
 
-	// TODO: 将字符串 id 转换为 {{.PrimaryKey.Type}} 类型
-	var convertedID {{.PrimaryKey.Type}} 
+	// TODO: 将字符串 id 转换为 {{.PrimaryKey.Type}} 类型. 例如:
+	// convertedID, err := strconv.ParseUint(id, 10, 64)
+	// if err != nil {
+	// 	 return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "无效的 ID 格式"})
+	// }
+	var convertedID {{.PrimaryKey.Type}}
 
 	resp, err := h.service.GetByID(convertedID)
 	if err != nil {
@@ -100,8 +101,8 @@ func (h *{{.EntityName}}Handler) GetByID(ctx fiber.Ctx) error {
 // @Accept       json
 // @Produce      json
 // @Param        id   path      {{.PrimaryKey.Type}}  true  "{{.EntityName}} ID"
-// @Param        request body model.Update{{.EntityName}}Request true "更新请求"
-// @Success      200  {object}  model.{{.EntityName}}Response
+// @Param        request body dto.Update{{.EntityName}}Request true "更新请求"
+// @Success      200  {object}  dto.{{.EntityName}}Response
 // @Failure      400  {object}  map[string]string
 // @Failure      404  {object}  map[string]string
 // @Failure      500  {object}  map[string]string
@@ -112,13 +113,13 @@ func (h *{{.EntityName}}Handler) Update(ctx fiber.Ctx) error {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "ID 不能为空"})
 	}
 
-	var req model.Update{{.EntityName}}Request
+	var req dto.Update{{.EntityName}}Request
 	if err := ctx.Bind().JSON(&req); err != nil {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "无法解析请求体"})
 	}
 
 	// TODO: 将字符串 id 转换为 {{.PrimaryKey.Type}} 类型
-	var convertedID {{.PrimaryKey.Type}} 
+	var convertedID {{.PrimaryKey.Type}}
 
 	resp, err := h.service.Update(convertedID, &req)
 	if err != nil {

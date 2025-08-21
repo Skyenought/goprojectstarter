@@ -1,0 +1,46 @@
+package di
+
+import (
+	"{{.ProjectModule}}/internal/configuration"
+	"{{.ProjectModule}}/internal/infrastructure/persistence"
+	"{{.ProjectModule}}/internal/infrastructure/router"
+	"github.com/gofiber/fiber/v3"
+	"go.uber.org/dig"
+)
+
+func BuildContainer(config *configuration.Config) (*dig.Container, error) {
+	container := dig.New()
+
+	if err := container.Provide(func() *configuration.Config { return config }); err != nil {
+		return nil, err
+	}
+
+	if err := container.Provide(provideDbType); err != nil {
+		return nil, err
+	}
+
+	providers := []interface{}{
+		provideFiberApp,
+		persistence.NewDatabase,
+		persistence.Connect,     
+		router.NewRouter,
+
+		// [GENERATOR ANCHOR] - Don't remove this comment!
+	}
+
+	for _, p := range providers {
+		if err := container.Provide(p); err != nil {
+			return nil, err
+		}
+	}
+
+	return container, nil
+}
+
+func provideDbType(config *configuration.Config) string {
+	return config.Database.Type
+}
+
+func provideFiberApp() *fiber.App {
+	return fiber.New()
+}

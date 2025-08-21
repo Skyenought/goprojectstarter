@@ -1,0 +1,14 @@
+package repository
+
+import (
+	"{{.ProjectModule}}/internal/domain/entity"
+)
+
+// {{.EntityName}}Repository 定义了 {{.EntityName}} 实体的持久化操作接口
+type {{.EntityName}}Repository interface {
+	Create(model *entity.{{.EntityName}}) error
+	FindAll() ([]entity.{{.EntityName}}, error)
+	FindByID(id {{.PrimaryKey.Type}}) (*entity.{{.EntityName}}, error)
+	Update(model *entity.{{.EntityName}}) error
+	Delete(id {{.PrimaryKey.Type}}) error
+}
