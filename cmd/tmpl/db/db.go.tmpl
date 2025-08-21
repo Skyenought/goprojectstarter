@@ -1,0 +1,97 @@
+package db
+
+import (
+	"fmt"
+	"log"
+	"os"
+	"time"
+
+	"{{.ProjectModule}}/internal/configuration"
+
+	"gorm.io/driver/mysql"
+	"gorm.io/driver/postgres"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
+)
+
+type Database interface {
+	Connect(config *configuration.Config) (*gorm.DB, error)
+}
+
+
+// postgresDatabase 实现了 Database 接口，用于 PostgreSQL
+type postgresDatabase struct{}
+
+func (p *postgresDatabase) Connect(config *configuration.Config) (*gorm.DB, error) {
+	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=disable TimeZone=Asia/Shanghai",
+		config.Database.Host,
+		config.Database.User,
+		config.Database.Password,
+		config.Database.DbName,
+		config.Database.Port,
+	)
+	return gorm.Open(postgres.Open(dsn), &gorm.Config{Logger: newLogger()})
+}
+
+// mysqlDatabase 实现了 Database 接口，用于 MySQL
+type mysqlDatabase struct{}
+
+func (m *mysqlDatabase) Connect(config *configuration.Config) (*gorm.DB, error) {
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
+		config.Database.User,
+		config.Database.Password,
+		config.Database.Host,
+		config.Database.Port,
+		config.Database.DbName,
+	)
+	return gorm.Open(mysql.Open(dsn), &gorm.Config{Logger: newLogger()})
+}
+
+// sqliteDatabase 实现了 Database 接口，用于 SQLite
+type sqliteDatabase struct{}
+
+func (s *sqliteDatabase) Connect(config *configuration.Config) (*gorm.DB, error) {
+	// 对于 SQLite，我们通常使用 dbname 字段作为数据库文件名
+	dbPath := fmt.Sprintf("%s.db", config.Database.DbName)
+	return gorm.Open(sqlite.Open(dbPath), &gorm.Config{Logger: newLogger()})
+}
+
+
+// NewDatabase 是一个工厂函数，根据 dbType 字符串返回相应的数据库接口实现
+// Wire 会自动调用这个函数来创建 Database 接口的实例
+func NewDatabase(dbType string) (Database, error) {
+	switch dbType {
+	case "psql":
+		return &postgresDatabase{}, nil
+	case "mysql":
+		return &mysqlDatabase{}, nil
+	case "sqlite":
+		return &sqliteDatabase{}, nil
+	default:
+		return nil, fmt.Errorf("不支持的数据库类型: %s", dbType)
+	}
+}
+
+// Connect 是一个专门用于执行数据库连接的函数
+func Connect(dbImpl Database, config *configuration.Config) (*gorm.DB, error) {
+	db, err := dbImpl.Connect(config)
+	if err != nil {
+		return nil, fmt.Errorf("连接数据库失败: %w", err)
+	}
+	log.Println("✅ 数据库连接成功!")
+	return db, nil
+}
+
+// newLogger 自定义 GORM 日志记录器，提供更好的日志格式
+func newLogger() logger.Interface {
+	return logger.New(
+		log.New(os.Stdout, "\r\n", log.LstdFlags),
+		logger.Config{
+			SlowThreshold:             200 * time.Millisecond,
+			LogLevel:                  logger.Info, // 可以根据环境调整 (e.g., logger.Warn)
+			IgnoreRecordNotFoundError: true,
+			Colorful:                  true,
+		},
+	)
+}

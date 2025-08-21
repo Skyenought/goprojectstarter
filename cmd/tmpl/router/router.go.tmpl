@@ -1,0 +1,29 @@
+package router
+
+import (
+	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/middleware/logger"
+)
+
+// Router 结构体用于接收依赖
+type Router struct {
+	App *fiber.App
+}
+
+func NewRouter(app *fiber.App) *Router {
+	return &Router{
+		App: app,
+	}
+}
+
+func (r *Router) SetupRoutes() {
+	r.App.Use(logger.New())
+
+	r.App.Get("/health", func(c fiber.Ctx) error {
+		return c.SendString("OK")
+	})
+
+	apiV1 := r.App.Group("/api/v1")
+
+	// [GENERATOR ANCHOR] - Don't remove this comment!
+}

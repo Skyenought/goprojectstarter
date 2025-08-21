@@ -1,0 +1,51 @@
+package di
+
+import (
+	"{{.ProjectModule}}/internal/configuration"
+	"{{.ProjectModule}}/internal/db"
+	"{{.ProjectModule}}/internal/router"
+	"github.com/gofiber/fiber/v3"
+	"go.uber.org/dig"
+)
+
+// BuildContainer now only takes config as a parameter.
+func BuildContainer(config *configuration.Config) (*dig.Container, error) {
+	container := dig.New()
+
+	// Provide the main config instance.
+	if err := container.Provide(func() *configuration.Config { return config }); err != nil {
+		return nil, err
+	}
+
+	// Create a new provider that extracts the dbType from the config.
+	// Dig will automatically use this to satisfy db.NewDatabase's string dependency.
+	if err := container.Provide(provideDbType); err != nil {
+		return nil, err
+	}
+
+	providers := []interface{}{
+		provideFiberApp,
+		db.NewDatabase,
+		db.Connect,
+		router.NewRouter,
+
+		// [GENERATOR ANCHOR] - Don't remove this comment!
+	}
+
+	for _, p := range providers {
+		if err := container.Provide(p); err != nil {
+			return nil, err
+		}
+	}
+
+	return container, nil
+}
+
+// provideDbType is a provider that extracts the database type from the configuration.
+func provideDbType(config *configuration.Config) string {
+	return config.Database.Type
+}
+
+func provideFiberApp() *fiber.App {
+	return fiber.New()
+}

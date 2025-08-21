@@ -1,0 +1,58 @@
+package service
+
+import (
+	"{{.ProjectModule}}/internal/entity"
+	"{{.ProjectModule}}/internal/model"
+	"{{.ProjectModule}}/internal/repository"
+)
+
+// {{.EntityName}}Service defines the business logic interface for {{.EntityName}}.
+type {{.EntityName}}Service interface {
+	Create(req *model.Create{{.EntityName}}Request) (*model.{{.EntityName}}Response, error)
+	GetAll() ([]model.{{.EntityName}}Response, error)
+	GetByID(id {{.PrimaryKey.Type}}) (*model.{{.EntityName}}Response, error)
+	Update(id {{.PrimaryKey.Type}}, req *model.Update{{.EntityName}}Request) (*model.{{.EntityName}}Response, error)
+	Delete(id {{.PrimaryKey.Type}}) error
+}
+
+type {{.LowerEntityName}}ServiceImpl struct {
+	repo repository.{{.EntityName}}Repository
+}
+
+// New{{.EntityName}}Service creates a new {{.EntityName}} service.
+func New{{.EntityName}}Service(repo repository.{{.EntityName}}Repository) {{.EntityName}}Service {
+	return &{{.LowerEntityName}}ServiceImpl{repo: repo}
+}
+
+// Create handles the logic for creating a new {{.EntityName}}.
+// NOTE: This is a placeholder implementation.
+func (s *{{.LowerEntityName}}ServiceImpl) Create(req *model.Create{{.EntityName}}Request) (*model.{{.EntityName}}Response, error) {
+	modelEntity := &entity.{{.EntityName}}{
+		// TODO: Map fields from req (*model.Create{{.EntityName}}Request) to modelEntity (*entity.{{.EntityName}})
+	}
+
+	if err := s.repo.Create(modelEntity); err != nil {
+		return nil, err
+	}
+
+	resp := &model.{{.EntityName}}Response{
+		// TODO: Map fields from modelEntity (*entity.{{.EntityName}}) to resp (*model.{{.EntityName}}Response)
+	}
+	return resp, nil
+}
+
+func (s *{{.LowerEntityName}}ServiceImpl) GetAll() ([]model.{{.EntityName}}Response, error) {
+	return []model.{{.EntityName}}Response{}, nil
+}
+
+func (s *{{.LowerEntityName}}ServiceImpl) GetByID(id {{.PrimaryKey.Type}}) (*model.{{.EntityName}}Response, error) {
+	return nil, nil
+}
+
+func (s *{{.LowerEntityName}}ServiceImpl) Update(id {{.PrimaryKey.Type}}, req *model.Update{{.EntityName}}Request) (*model.{{.EntityName}}Response, error) {
+	return nil, nil
+}
+
+func (s *{{.LowerEntityName}}ServiceImpl) Delete(id {{.PrimaryKey.Type}}) error {
+	return s.repo.Delete(id)
+}

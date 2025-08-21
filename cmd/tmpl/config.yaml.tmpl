@@ -1,0 +1,17 @@
+server:
+  port: 8080
+
+tls:
+  enabled: false
+  certFile: "path/to/your/cert.pem" # Public certificate file
+  keyFile: "path/to/your/key.pem"
+
+database:
+  type: "psql" # Supported types: psql, mysql, sqlite
+  host: "localhost"
+  port: 5432
+  user: "root"
+  password: "password"
+  dbname: "{{.AppName}}"
+jwt:
+  secret:

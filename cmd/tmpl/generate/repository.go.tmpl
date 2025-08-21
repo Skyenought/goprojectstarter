@@ -1,0 +1,53 @@
+package repository
+
+import (
+	"{{.ProjectModule}}/internal/entity"
+	"gorm.io/gorm"
+)
+
+// {{.EntityName}}Repository defines the interface for operations on {{.EntityName}}s.
+type {{.EntityName}}Repository interface {
+	Create(model *entity.{{.EntityName}}) error
+	FindAll() ([]entity.{{.EntityName}}, error)
+	FindByID(id {{.PrimaryKey.Type}}) (*entity.{{.EntityName}}, error)
+	Update(model *entity.{{.EntityName}}) error
+	Delete(id {{.PrimaryKey.Type}}) error
+}
+
+type {{.LowerEntityName}}RepositoryImpl struct {
+	db *gorm.DB
+}
+
+// New{{.EntityName}}Repository creates a new GORM {{.EntityName}} repository.
+func New{{.EntityName}}Repository(db *gorm.DB) {{.EntityName}}Repository {
+	// AutoMigrate the schema. In production, consider using a migration tool.
+	db.AutoMigrate(&entity.{{.EntityName}}{})
+	return &{{.LowerEntityName}}RepositoryImpl{db: db}
+}
+
+func (r *{{.LowerEntityName}}RepositoryImpl) Create(model *entity.{{.EntityName}}) error {
+	return r.db.Create(model).Error
+}
+
+func (r *{{.LowerEntityName}}RepositoryImpl) FindAll() ([]entity.{{.EntityName}}, error) {
+	var models []entity.{{.EntityName}}
+	err := r.db.Find(&models).Error
+	return models, err
+}
+
+func (r *{{.LowerEntityName}}RepositoryImpl) FindByID(id {{.PrimaryKey.Type}}) (*entity.{{.EntityName}}, error) {
+	var model entity.{{.EntityName}}
+	err := r.db.First(&model, "{{.PrimaryKey.GormName}} = ?", id).Error
+	if err != nil {
+		return nil, err
+	}
+	return &model, nil
+}
+
+func (r *{{.LowerEntityName}}RepositoryImpl) Update(model *entity.{{.EntityName}}) error {
+	return r.db.Save(model).Error
+}
+
+func (r *{{.LowerEntityName}}RepositoryImpl) Delete(id {{.PrimaryKey.Type}}) error {
+	return r.db.Delete(&entity.{{.EntityName}}{}, id).Error
+}
