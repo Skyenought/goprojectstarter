@@ -1,4 +1,4 @@
-module fiberwebstarter
+module github.com/Skyenought/goprojectstarter
 
 go 1.23.0
 
