@@ -159,7 +159,7 @@ func (h *{{.EntityName}}Handler) Delete(ctx fiber.Ctx) error {
 	// if err != nil {
 	// 	 return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "无效的 ID 格式"})
 	// }
-	if err := h.service.Delete(convertedID); err != nil {
+	if err = h.service.Delete(convertedID); err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "删除失败"})
 	}
 

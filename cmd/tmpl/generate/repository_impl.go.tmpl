@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"log"
+
 	"{{.ProjectModule}}/internal/domain/entity"
 	"{{.ProjectModule}}/internal/domain/ports"
 	"gorm.io/gorm"
@@ -11,7 +13,7 @@ type {{.LowerEntityName}}RepositoryImpl struct {
 }
 
 // New{{.EntityName}}Repository 创建一个新的 GORM {{.EntityName}} 仓库实现
-func New{{.EntityName}}Repository(db *gorm.DB) repository.{{.EntityName}}Repository {
+func New{{.EntityName}}Repository(db *gorm.DB) ports.{{.EntityName}}Repository {
 	if !db.Migrator().HasTable(&entity.{{.EntityName}}{}) {
 		log.Printf("Table for '%s' not found, running AutoMigrate...", "{{.EntityName}}")
 

@@ -16,11 +16,11 @@ type {{.EntityName}}Service interface {
 }
 
 type {{.LowerEntityName}}ServiceImpl struct {
-	repo repository.{{.EntityName}}Repository
+	repo ports.{{.EntityName}}Repository
 }
 
 // New{{.EntityName}}Service creates a new {{.EntityName}} service.
-func New{{.EntityName}}Service(repo repository.{{.EntityName}}Repository) {{.EntityName}}Service {
+func New{{.EntityName}}Service(repo ports.{{.EntityName}}Repository) {{.EntityName}}Service {
 	return &{{.LowerEntityName}}ServiceImpl{repo: repo}
 }
 

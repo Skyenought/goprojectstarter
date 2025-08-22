@@ -224,6 +224,6 @@ func addRoutesToRouter(info *EntityInfo, paths PathConfig) error {
 }
 
 func formatFile(filePath string) error {
-	cmd := exec.Command("gofmt", "-w", filePath)
+	cmd := exec.Command("goimports", "-l", "-w", filePath)
 	return cmd.Run()
 }

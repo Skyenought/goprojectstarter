@@ -11,11 +11,22 @@ import (
 
 // structValidator is a custom validator that implements fiber.StructValidator
 type structValidator struct {
+	once     sync.Once
 	validate *validator.Validate
 }
 
-// Validate implements the fiber.StructValidator interface.
-func (v *structValidator) Validate(out any) error {
+func (v *structValidator) Engine() any {
+	v.once.Do(func() {
+		v.validate = validator.New()
+		v.validate.SetTagName("binding")
+	})
+	return v.validate
+}
+
+func (v *structValidator) ValidateStruct(out any) error {
+	if v.validate == nil {
+		return fiber.ErrInternalServerError
+	}
 	return v.validate.Struct(out)
 }
 

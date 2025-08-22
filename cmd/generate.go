@@ -8,6 +8,7 @@ import (
 	"go/parser"
 	"go/token"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"text/template"
@@ -308,6 +309,9 @@ func parseEntityFile(filePath, projectModule string) (*EntityInfo, error) {
 }
 
 func printNextSteps(info *EntityInfo) {
+	cmd := exec.Command("goimports", "-l", "-w", ".")
+	cmd.Run()
+
 	appName := filepath.Base(info.ProjectModule)
 	fmt.Println("\n✅ 代码已自动集成!")
 	fmt.Println("👉 下一步:")
