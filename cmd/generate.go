@@ -138,10 +138,9 @@ func runGenerate(cmd *cobra.Command, args []string) {
 		fmt.Printf("   自动添加路由到 %s 失败: %v\n", paths.RouterFile, err)
 		return
 	}
-
-	formatFile(paths.DIFile)
-	formatFile(paths.RouterFile)
-
+	dir, _ := os.Getwd()
+	os.Chdir(dir)
+	formatFile(".")
 	printNextSteps(info)
 }
 
