@@ -12,6 +12,8 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/Skyenought/goprojectstarter/pkg/util"
+
 	"github.com/spf13/cobra"
 )
 
@@ -68,6 +70,9 @@ func runSyncRoutes(cmd *cobra.Command, args []string) {
 			fmt.Printf("❌ 更新目录 %s 中的 handler 失败: %v\n", dir, err)
 		}
 	}
+
+	util.FormatImport()
+	util.FormatFile()
 
 	fmt.Println("✅ 路由注释同步完成！")
 }
@@ -231,10 +236,10 @@ func updateHandlerFile(path string, routes map[string]RouteInfo) error {
 		fmt.Printf("   - 正在写回文件: %s\n", path)
 		// 如果是 Case 2 的情况, lines 已经被修改, 所以直接用 lines
 		if len(newLines) == len(lines) {
-			return os.WriteFile(path, []byte(strings.Join(lines, "\n")), 0644)
+			return os.WriteFile(path, []byte(strings.Join(lines, "\n")), 0o644)
 		}
 		// 如果是 Case 1 的情况, newLines 是全新的, 用 newLines
-		return os.WriteFile(path, []byte(strings.Join(newLines, "\n")), 0644)
+		return os.WriteFile(path, []byte(strings.Join(newLines, "\n")), 0o644)
 	}
 
 	return nil

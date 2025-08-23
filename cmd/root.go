@@ -73,16 +73,19 @@ func createProject(projectName string) {
 		{SourcePath: "tmpl/db/db.go.tmpl", OutputPath: "internal/adapter/repository/db.go"},
 		{SourcePath: "tmpl/router/router.go.tmpl", OutputPath: "internal/adapter/router/router.go"},
 		{SourcePath: "tmpl/di/container.go.tmpl", OutputPath: "internal/di/container.go"},
+		// middleware 相关模板
+		{SourcePath: "tmpl/middleware/jwt/config.go.tmpl", OutputPath: "internal/adapter/middleware/jwt/config.go"},
+		{SourcePath: "tmpl/middleware/jwt/jwt.go.tmpl", OutputPath: "internal/adapter/middleware/jwt/jwt.go"},
 	}
 
-	if err := os.Mkdir(project.ProjectModule, 0755); err != nil {
+	if err := os.Mkdir(project.ProjectModule, 0o755); err != nil {
 		fmt.Printf("创建项目目录失败: %s\n", err)
 		return
 	}
 
 	for _, t := range templates {
 		outputDir := filepath.Dir(filepath.Join(project.ProjectModule, t.OutputPath))
-		if err := os.MkdirAll(outputDir, 0755); err != nil {
+		if err := os.MkdirAll(outputDir, 0o755); err != nil {
 			fmt.Printf("创建子目录 '%s' 失败: %s\n", outputDir, err)
 			return
 		}
@@ -99,7 +102,7 @@ func createProject(projectName string) {
 	}
 	for _, dir := range emptyDirs {
 		fullPath := filepath.Join(projectName, dir)
-		if err := os.MkdirAll(fullPath, 0755); err != nil {
+		if err := os.MkdirAll(fullPath, 0o755); err != nil {
 			fmt.Printf("创建空目录 '%s' 失败: %s\n", dir, err)
 		} else {
 			fmt.Printf(" ✓ 创建目录: %s\n", fullPath)
@@ -131,6 +134,9 @@ func createDDDProject(projectName string) {
 		{SourcePath: "tmpl/db/db.go.ddd.tmpl", OutputPath: "internal/infrastructure/persistence/db.go"},
 		{SourcePath: "tmpl/router/router.go.tmpl", OutputPath: "internal/infrastructure/router/router.go"},
 		{SourcePath: "tmpl/di/container.go.ddd.tmpl", OutputPath: "internal/di/container.go"},
+		// middleware 相关模板
+		{SourcePath: "tmpl/middleware/jwt/config.go.tmpl", OutputPath: "internal/infrastructure/middleware/jwt/config.go"},
+		{SourcePath: "tmpl/middleware/jwt/jwt.go.tmpl", OutputPath: "internal/infrastructure/middleware/jwt/jwt.go"},
 	}
 
 	if err := os.Mkdir(project.ProjectModule, 0o755); err != nil {

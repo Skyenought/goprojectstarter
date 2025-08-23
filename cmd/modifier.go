@@ -8,7 +8,6 @@ import (
 	"go/parser"
 	"go/token"
 	"os"
-	"os/exec"
 	"strings"
 	"text/template"
 
@@ -221,9 +220,4 @@ func addRoutesToRouter(info *EntityInfo, paths PathConfig) error {
 	}
 
 	return os.WriteFile(filePath, formatted, 0o644)
-}
-
-func formatFile(filePath string) error {
-	cmd := exec.Command("goimports", "-l", "-w", filePath)
-	return cmd.Run()
 }

@@ -14,6 +14,8 @@ import (
 	"text/template"
 	"unicode"
 
+	"github.com/Skyenought/goprojectstarter/pkg/util"
+
 	"github.com/spf13/cobra"
 	"golang.org/x/mod/modfile"
 )
@@ -138,9 +140,10 @@ func runGenerate(cmd *cobra.Command, args []string) {
 		fmt.Printf("   自动添加路由到 %s 失败: %v\n", paths.RouterFile, err)
 		return
 	}
-	dir, _ := os.Getwd()
-	os.Chdir(dir)
-	formatFile(".")
+
+	util.FormatImport()
+	util.FormatFile()
+
 	printNextSteps(info)
 }
 

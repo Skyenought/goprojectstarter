@@ -1,9 +1,12 @@
 package di
 
 import (
-	"{{.ProjectModule}}/internal/configuration"
+	"sync"
+
 	"{{.ProjectModule}}/internal/adapter/repository"
 	"{{.ProjectModule}}/internal/adapter/router"
+	"{{.ProjectModule}}/internal/configuration"
+
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v3"
 	"go.uber.org/dig"
