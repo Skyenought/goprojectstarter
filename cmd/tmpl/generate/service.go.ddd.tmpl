@@ -8,11 +8,13 @@ import (
 
 // {{.EntityName}}Service 定义了 {{.EntityName}} 的应用服务接口
 type {{.EntityName}}Service interface {
+{{if not .NoCrudMethods}}
 	Create(req *dto.Create{{.EntityName}}Request) (*dto.{{.EntityName}}Response, error)
 	GetAll() ([]dto.{{.EntityName}}Response, error)
 	GetByID(id {{.PrimaryKey.Type}}) (*dto.{{.EntityName}}Response, error)
 	Update(id {{.PrimaryKey.Type}}, req *dto.Update{{.EntityName}}Request) (*dto.{{.EntityName}}Response, error)
 	Delete(id {{.PrimaryKey.Type}}) error
+{{end}}
 }
 
 type {{.LowerEntityName}}ServiceImpl struct {
@@ -24,6 +26,7 @@ func New{{.EntityName}}Service(repo repository.{{.EntityName}}Repository) {{.Ent
 	return &{{.LowerEntityName}}ServiceImpl{repo: repo}
 }
 
+{{if not .NoCrudMethods}}
 // Create 负责创建 {{.EntityName}} 的业务逻辑
 func (s *{{.LowerEntityName}}ServiceImpl) Create(req *dto.Create{{.EntityName}}Request) (*dto.{{.EntityName}}Response, error) {
 	modelEntity := &entity.{{.EntityName}}{
@@ -58,3 +61,4 @@ func (s *{{.LowerEntityName}}ServiceImpl) Update(id {{.PrimaryKey.Type}}, req *d
 func (s *{{.LowerEntityName}}ServiceImpl) Delete(id {{.PrimaryKey.Type}}) error {
 	return s.repo.Delete(id)
 }
+{{end}}

@@ -16,6 +16,7 @@ func New{{.EntityName}}Handler(s service.{{.EntityName}}Service) *{{.EntityName}
 	return &{{.EntityName}}Handler{service: s}
 }
 
+{{if not .NoCrudMethods}}
 // Create 处理创建新 {{.EntityName}} 的请求
 // @Summary      创建 {{.EntityName}}
 // @Description  根据请求体创建一个新的 {{.EntityName}} 记录
@@ -153,3 +154,4 @@ func (h *{{.EntityName}}Handler) Delete(ctx fiber.Ctx) error {
 
 	return ctx.SendStatus(fiber.StatusNoContent)
 }
+{{end}}

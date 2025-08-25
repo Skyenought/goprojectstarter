@@ -6,9 +6,11 @@ import (
 
 // {{.EntityName}}Repository 定义了数据操作接口
 type {{.EntityName}}Repository interface {
+{{if not .NoCrudMethods}}
 	Create(model *entity.{{.EntityName}}) error
 	FindAll() ([]entity.{{.EntityName}}, error)
 	FindByID(id {{.PrimaryKey.Type}}) (*entity.{{.EntityName}}, error)
 	Update(model *entity.{{.EntityName}}) error
 	Delete(id {{.PrimaryKey.Type}}) error
+{{end}}
 }

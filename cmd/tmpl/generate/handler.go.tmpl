@@ -6,16 +6,15 @@ import (
 	"github.com/gofiber/fiber/v3"
 )
 
-// {{.EntityName}}Handler 封装了与 {{.EntityName}} 实体相关的 HTTP 处理器
 type {{.EntityName}}Handler struct {
 	service service.{{.EntityName}}Service
 }
 
-// New{{.EntityName}}Handler 创建一个新的 {{.EntityName}} 处理器
 func New{{.EntityName}}Handler(s service.{{.EntityName}}Service) *{{.EntityName}}Handler {
 	return &{{.EntityName}}Handler{service: s}
 }
 
+{{if not .NoCrudMethods}}
 // Create 处理创建新 {{.EntityName}} 的请求
 // @Summary      创建 {{.EntityName}}
 // @Description  根据请求体创建一个新的 {{.EntityName}} 记录
@@ -33,7 +32,6 @@ func (h *{{.EntityName}}Handler) Create(ctx fiber.Ctx) error {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "无法解析请求体"})
 	}
 
-	// TODO: 在这里添加请求体验证逻辑 (e.g., using a validator library)
 
 	resp, err := h.service.Create(&req)
 	if err != nil {
@@ -83,15 +81,13 @@ func (h *{{.EntityName}}Handler) GetByID(ctx fiber.Ctx) error {
 	}
 
 
-	var convertedID {{.PrimaryKey.Type}} 
-    // TODO: 将字符串 id 转换为 uint 类型. 例如:
+	var convertedID {{.PrimaryKey.Type}}
 	// convertedID, err = strconv.ParseUint(id, 10, 64)
 	// if err != nil {
 	// 	 return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "无效的 ID 格式"})
 	// }
 	resp, err := h.service.GetByID(convertedID)
 	if err != nil {
-		// TODO: 区分 "not found" 错误和其他服务器错误
 		return ctx.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "记录未找到"})
 	}
 
@@ -124,7 +120,6 @@ func (h *{{.EntityName}}Handler) Update(ctx fiber.Ctx) error {
 	}
 
 	var convertedID {{.PrimaryKey.Type}}
-    // TODO: 将字符串 id 转换为 uint 类型. 例如:
 	// convertedID, err = strconv.ParseUint(id, 10, 64)
 	// if err != nil {
 	// 	 return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "无效的 ID 格式"})
@@ -154,7 +149,6 @@ func (h *{{.EntityName}}Handler) Delete(ctx fiber.Ctx) error {
 	}
 
 	var convertedID {{.PrimaryKey.Type}}
-    // TODO: 将字符串 id 转换为 uint 类型. 例如:
 	// convertedID, err = strconv.ParseUint(id, 10, 64)
 	// if err != nil {
 	// 	 return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "无效的 ID 格式"})
@@ -165,3 +159,4 @@ func (h *{{.EntityName}}Handler) Delete(ctx fiber.Ctx) error {
 
 	return ctx.SendStatus(fiber.StatusNoContent)
 }
+{{end}}

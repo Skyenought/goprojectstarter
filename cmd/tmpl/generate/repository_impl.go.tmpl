@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"fmt"
 	"log"
 
 	"{{.ProjectModule}}/internal/domain/entity"
@@ -27,6 +28,7 @@ func New{{.EntityName}}Repository(db *gorm.DB) ports.{{.EntityName}}Repository {
 	return &{{.LowerEntityName}}RepositoryImpl{db: db}
 }
 
+{{if not .NoCrudMethods}}
 func (r *{{.LowerEntityName}}RepositoryImpl) Create(model *entity.{{.EntityName}}) error {
 	return r.db.Create(model).Error
 }
@@ -53,3 +55,4 @@ func (r *{{.LowerEntityName}}RepositoryImpl) Update(model *entity.{{.EntityName}
 func (r *{{.LowerEntityName}}RepositoryImpl) Delete(id {{.PrimaryKey.Type}}) error {
 	return r.db.Delete(&entity.{{.EntityName}}{}, id).Error
 }
+{{end}}

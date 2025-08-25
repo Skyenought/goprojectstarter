@@ -24,6 +24,7 @@ var (
 	//go:embed tmpl/generate
 	generateTemplates embed.FS
 	forceGenerate     bool
+	noCrudMethods     bool
 )
 
 // PathConfig 根据项目结构存储不同的路径和包名
@@ -58,6 +59,7 @@ type EntityInfo struct {
 	TableName       string
 	PrimaryKey      FieldInfo
 	Fields          []FieldInfo
+	NoCrudMethods   bool
 }
 
 var generateCmd = &cobra.Command{
@@ -72,6 +74,7 @@ var generateCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(generateCmd)
 	generateCmd.Flags().BoolVarP(&forceGenerate, "force", "F", false, "强制覆盖已存在的文件")
+	generateCmd.Flags().BoolVar(&noCrudMethods, "no-crud", false, "不要生成 CRUD 模板方法")
 }
 
 // isDDDProject 通过检查关键目录是否存在来判断项目结构
@@ -124,6 +127,7 @@ func runGenerate(cmd *cobra.Command, args []string) {
 		fmt.Printf("   解析实体文件失败: %v\n", err)
 		return
 	}
+	info.NoCrudMethods = noCrudMethods
 	fmt.Printf(" ✓ 解析成功! 实体: %s, 表名: %s\n", info.EntityName, info.TableName)
 
 	generateCode(info, paths)
@@ -136,9 +140,11 @@ func runGenerate(cmd *cobra.Command, args []string) {
 		fmt.Printf("   自动修改 %s 失败: %v\n", paths.RouterFile, err)
 		return
 	}
-	if err := addRoutesToRouter(info, paths); err != nil {
-		fmt.Printf("   自动添加路由到 %s 失败: %v\n", paths.RouterFile, err)
-		return
+	if !info.NoCrudMethods {
+		if err := addRoutesToRouter(info, paths); err != nil {
+			fmt.Printf("   自动添加路由到 %s 失败: %v\n", paths.RouterFile, err)
+			return
+		}
 	}
 
 	util.FormatImport()

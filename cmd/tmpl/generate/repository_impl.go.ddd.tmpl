@@ -1,6 +1,9 @@
 package persistence
 
 import (
+	"fmt"
+	"log"
+
 	"{{.ProjectModule}}/internal/domain/entity"
 	"{{.ProjectModule}}/internal/domain/repository"
 	"gorm.io/gorm"
@@ -24,6 +27,7 @@ func New{{.EntityName}}Repository(db *gorm.DB) repository.{{.EntityName}}Reposit
 	return &{{.LowerEntityName}}RepositoryImpl{db: db}
 }
 
+{{if not .NoCrudMethods}}
 func (r *{{.LowerEntityName}}RepositoryImpl) Create(model *entity.{{.EntityName}}) error {
 	return r.db.Create(model).Error
 }
@@ -50,3 +54,4 @@ func (r *{{.LowerEntityName}}RepositoryImpl) Update(model *entity.{{.EntityName}
 func (r *{{.LowerEntityName}}RepositoryImpl) Delete(id {{.PrimaryKey.Type}}) error {
 	return r.db.Delete(&entity.{{.EntityName}}{}, id).Error
 }
+{{end}}
