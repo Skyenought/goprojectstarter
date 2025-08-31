@@ -1,10 +1,10 @@
 package di
 
 import (
-	"sync"
+    "sync"
 
-	"{{.ProjectModule}}/internal/adapter/repository"
-	"{{.ProjectModule}}/internal/adapter/router"
+	"{{.ProjectModule}}/internal/infrastructure/persistence"
+	"{{.ProjectModule}}/internal/infrastructure/router"
 	"{{.ProjectModule}}/internal/configuration"
 
 	"github.com/go-playground/validator/v10"
@@ -33,16 +33,13 @@ func (v *structValidator) ValidateStruct(out any) error {
 	return v.validate.Struct(out)
 }
 
-// BuildContainer now only takes config as a parameter.
 func BuildContainer(config *configuration.Config) (*dig.Container, error) {
 	container := dig.New()
 
-	// Provide the main config instance.
 	if err := container.Provide(func() *configuration.Config { return config }); err != nil {
 		return nil, err
 	}
 
-	// Create a new provider that extracts the dbType from the config.
 	if err := container.Provide(provideDbType); err != nil {
 		return nil, err
 	}
@@ -50,8 +47,8 @@ func BuildContainer(config *configuration.Config) (*dig.Container, error) {
 	providers := []interface{}{
 		provideFiberApp,
 		provideValidator,
-		repository.NewDatabase,
-    	repository.Connect,
+		persistence.NewDatabase,
+		persistence.Connect,
 		router.NewRouter,
 
 		// [GENERATOR ANCHOR] - Don't remove this comment!
@@ -66,7 +63,6 @@ func BuildContainer(config *configuration.Config) (*dig.Container, error) {
 	return container, nil
 }
 
-// provideDbType is a provider that extracts the database type from the configuration.
 func provideDbType(config *configuration.Config) string {
 	return config.Database.Type
 }

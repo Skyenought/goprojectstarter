@@ -18,7 +18,8 @@ type JWTConfig struct {
 
 // DatabaseConfig holds database connection settings.
 type DatabaseConfig struct {
-	Type     string `mapstructure:"type"` // <-- Added
+	Type     string `mapstructure:"type"` 
+	DSN      string `mapstructure:"dsn"`
 	Host     string `mapstructure:"host"`
 	Port     int    `mapstructure:"port"`
 	User     string `mapstructure:"user"`

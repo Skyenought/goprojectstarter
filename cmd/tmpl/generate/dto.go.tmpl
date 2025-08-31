@@ -1,0 +1,15 @@
+package dto
+
+
+// Create{{.EntityName}}Request defines the payload for creating a new {{.EntityName}}.
+type Create{{.EntityName}}Request struct {}
+
+// Update{{.EntityName}}Request defines the payload for updating a {{.EntityName}}.
+type Update{{.EntityName}}Request struct {}
+
+// {{.EntityName}}Response defines the structure of the returned {{.EntityName}} object.
+type {{.EntityName}}Response struct {
+	{{- range .Fields}}
+	{{.Name}} {{.Type}} `json:"{{.LowerName}}"`
+	{{- end}}
+}

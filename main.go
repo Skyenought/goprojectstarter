@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fiberwebstarter/cmd"
+	"github.com/Skyenought/goprojectstarter/cmd"
 )
 
 func main() {

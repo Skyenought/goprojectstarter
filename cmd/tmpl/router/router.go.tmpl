@@ -17,7 +17,9 @@ func NewRouter(app *fiber.App) *Router {
 }
 
 func (r *Router) SetupRoutes() {
-	r.App.Use(logger.New())
+	r.App.Use(logger.New(logger.Config{
+		DisableColors: true,
+	}))
 
 	r.App.Get("/health", func(c fiber.Ctx) error {
 		return c.SendString("OK")

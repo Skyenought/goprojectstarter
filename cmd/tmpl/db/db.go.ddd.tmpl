@@ -1,4 +1,4 @@
-package repository
+package persistence
 
 import (
 	"fmt"
@@ -17,12 +17,10 @@ import (
 	"gorm.io/gorm/logger"
 )
 
-// Database 接口定义了数据库连接方法
 type Database interface {
 	Connect(config *configuration.Config) (*gorm.DB, error)
 }
 
-// postgresDatabase 实现了 Database 接口，用于 PostgreSQL
 type postgresDatabase struct{}
 
 func (p *postgresDatabase) Connect(config *configuration.Config) (*gorm.DB, error) {
@@ -58,7 +56,6 @@ func (p *postgresDatabase) Connect(config *configuration.Config) (*gorm.DB, erro
 	return gorm.Open(postgres.Open(dsn), &gorm.Config{Logger: newLogger()})
 }
 
-// mysqlDatabase 实现了 Database 接口，用于 MySQL
 type mysqlDatabase struct{}
 
 func (m *mysqlDatabase) Connect(config *configuration.Config) (*gorm.DB, error) {
@@ -75,12 +72,9 @@ func (m *mysqlDatabase) Connect(config *configuration.Config) (*gorm.DB, error) 
 	return gorm.Open(mysql.Open(dsn), &gorm.Config{Logger: newLogger()})
 }
 
-// sqliteDatabase 实现了 Database 接口，用于 SQLite
 type sqliteDatabase struct{}
 
 func (s *sqliteDatabase) Connect(config *configuration.Config) (*gorm.DB, error) {
-	// 对于 SQLite，DSN 就是数据库文件路径。如果提供了 DSN，就直接使用它。
-	// 否则，我们使用 dbname 字段作为数据库文件名来构建路径。
 	dbPath := config.Database.DSN
 	if dbPath == "" {
 		dbPath = fmt.Sprintf("%s.db", config.Database.DbName)
@@ -88,8 +82,6 @@ func (s *sqliteDatabase) Connect(config *configuration.Config) (*gorm.DB, error)
 	return gorm.Open(sqlite.Open(dbPath), &gorm.Config{Logger: newLogger()})
 }
 
-// NewDatabase 是一个工厂函数，根据配置返回相应的数据库接口实现
-// DI 容器会自动调用这个函数来创建 Database 接口的实例
 func NewDatabase(dbType string) (Database, error) {
 	switch dbType {
 	case "psql":
@@ -103,8 +95,6 @@ func NewDatabase(dbType string) (Database, error) {
 	}
 }
 
-// Connect 是一个专门用于执行数据库连接的函数
-// DI 容器会先调用 NewDatabase，然后将结果传入此函数，最终得到 *gorm.DB 连接实例
 func Connect(dbImpl Database, config *configuration.Config) (*gorm.DB, error) {
 	db, err := dbImpl.Connect(config)
 	if err != nil {
@@ -114,7 +104,6 @@ func Connect(dbImpl Database, config *configuration.Config) (*gorm.DB, error) {
 	return db, nil
 }
 
-// newLogger 自定义 GORM 日志记录器
 func newLogger() logger.Interface {
 	return logger.New(
 		log.New(os.Stdout, "\r\n", log.LstdFlags),

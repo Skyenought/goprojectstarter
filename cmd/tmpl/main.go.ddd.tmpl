@@ -8,7 +8,7 @@ import (
 
 	"{{.ProjectModule}}/internal/configuration"
 	"{{.ProjectModule}}/internal/di"
-	"{{.ProjectModule}}/internal/adapter/router"
+	"{{.ProjectModule}}/internal/infrastructure/router"
 )
 
 func main() {
@@ -21,7 +21,6 @@ func main() {
 		log.Fatalf("构建 DI 容器失败: %v", err)
 	}
 
-	// container.Invoke 会自动找到位于新包路径下的 *router.Router
 	err = container.Invoke(func(r *router.Router) {
 		r.SetupRoutes()
 		app := r.App
@@ -39,7 +38,7 @@ func main() {
 
 			tlsConfig := &tls.Config{
 				Certificates: []tls.Certificate{cert},
-				MinVersion:   tls.VersionTLS12, // 强制最低 TLS 1.2 版本
+				MinVersion:   tls.VersionTLS12,
 			}
 
 			ln, err := tls.Listen("tcp", serverAddr, tlsConfig)

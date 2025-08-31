@@ -1,30 +1,36 @@
 package repository
 
 import (
-	"{{.ProjectModule}}/internal/entity"
+	"fmt"
+	"log"
+
+	"{{.ProjectModule}}/internal/domain/entity"
+	"{{.ProjectModule}}/internal/domain/ports"
 	"gorm.io/gorm"
 )
 
-// {{.EntityName}}Repository defines the interface for operations on {{.EntityName}}s.
-type {{.EntityName}}Repository interface {
-	Create(model *entity.{{.EntityName}}) error
-	FindAll() ([]entity.{{.EntityName}}, error)
-	FindByID(id {{.PrimaryKey.Type}}) (*entity.{{.EntityName}}, error)
-	Update(model *entity.{{.EntityName}}) error
-	Delete(id {{.PrimaryKey.Type}}) error
-}
+var _ ports.{{.EntityName}}Repository = (*{{.LowerEntityName}}RepositoryImpl)(nil)
 
 type {{.LowerEntityName}}RepositoryImpl struct {
 	db *gorm.DB
 }
 
-// New{{.EntityName}}Repository creates a new GORM {{.EntityName}} repository.
-func New{{.EntityName}}Repository(db *gorm.DB) {{.EntityName}}Repository {
-	// AutoMigrate the schema. In production, consider using a migration tool.
-	db.AutoMigrate(&entity.{{.EntityName}}{})
+// New{{.EntityName}}Repository 创建一个新的 GORM {{.EntityName}} 仓库实现
+func New{{.EntityName}}Repository(db *gorm.DB) ports.{{.EntityName}}Repository {
+	if !db.Migrator().HasTable(&entity.{{.EntityName}}{}) {
+		log.Printf("Table for '%s' not found, running AutoMigrate...", "{{.EntityName}}")
+
+		err := db.AutoMigrate(&entity.{{.EntityName}}{})
+		if err != nil {
+			panic(fmt.Sprintf("Failed to auto-migrate table for {{.EntityName}}: %v", err))
+		}
+		log.Printf("Table for '%s' created successfully.", "{{.EntityName}}")
+	}
+
 	return &{{.LowerEntityName}}RepositoryImpl{db: db}
 }
 
+{{if not .NoCrudMethods}}
 func (r *{{.LowerEntityName}}RepositoryImpl) Create(model *entity.{{.EntityName}}) error {
 	return r.db.Create(model).Error
 }
@@ -51,3 +57,12 @@ func (r *{{.LowerEntityName}}RepositoryImpl) Update(model *entity.{{.EntityName}
 func (r *{{.LowerEntityName}}RepositoryImpl) Delete(id {{.PrimaryKey.Type}}) error {
 	return r.db.Delete(&entity.{{.EntityName}}{}, id).Error
 }
+{{else}}
+/*
+// ExampleMethod 是一个自定义方法的示例
+func (r *{{.LowerEntityName}}RepositoryImpl) ExampleMethod(ctx context.Context, arg string) (string, error) {
+	// 在这里实现你的自定义数据库逻辑
+	return "示例返回", nil
+}
+*/
+{{end}}

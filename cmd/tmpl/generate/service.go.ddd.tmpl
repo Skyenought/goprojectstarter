@@ -1,0 +1,99 @@
+package service
+
+import (
+	"context"
+	"{{.ProjectModule}}/internal/domain/repository"
+	"{{.ProjectModule}}/internal/interfaces/dto"
+)
+
+// {{.EntityName}}Service 定义了 {{.EntityName}} 的应用服务接口
+type {{.EntityName}}Service interface {
+{{if not .NoCrudMethods}}
+	Create(ctx context.Context, req *dto.Create{{.EntityName}}Request) (*dto.{{.EntityName}}Response, error)
+	GetAll(ctx context.Context) ([]dto.{{.EntityName}}Response, error)
+	GetByID(ctx context.Context, id {{.PrimaryKey.Type}}) (*dto.{{.EntityName}}Response, error)
+	Update(ctx context.Context, id {{.PrimaryKey.Type}}, req *dto.Update{{.EntityName}}Request) (*dto.{{.EntityName}}Response, error)
+	Delete(ctx context.Context, id {{.PrimaryKey.Type}}) error
+{{else}}
+	// ExampleMethod(ctx context.Context, id {{.PrimaryKey.Type}}) (*dto.{{.EntityName}}Response, error)
+{{end}}
+}
+
+type {{.LowerEntityName}}ServiceImpl struct {
+	repo   repository.{{.EntityName}}Repository
+	mapper dto.{{.EntityName}}Mapper
+}
+
+// New{{.EntityName}}Service 创建一个新的 {{.EntityName}} 服务
+func New{{.EntityName}}Service(repo repository.{{.EntityName}}Repository) {{.EntityName}}Service {
+	return &{{.LowerEntityName}}ServiceImpl{
+		repo:   repo,
+		mapper: dto.{{.EntityName}}Mapper{},
+	}
+}
+
+{{if not .NoCrudMethods}}
+// Create 负责创建 {{.EntityName}} 的业务逻辑
+func (s *{{.LowerEntityName}}ServiceImpl) Create(ctx context.Context, req *dto.Create{{.EntityName}}Request) (*dto.{{.EntityName}}Response, error) {
+	modelEntity := s.mapper.ToEntity(req)
+
+	if err := s.repo.Create(ctx, modelEntity); err != nil {
+		return nil, err
+	}
+
+	return s.mapper.ToResponse(modelEntity), nil
+}
+
+// GetAll 负责获取所有 {{.EntityName}} 的业务逻辑
+func (s *{{.LowerEntityName}}ServiceImpl) GetAll(ctx context.Context) ([]dto.{{.EntityName}}Response, error) {
+	entities, err := s.repo.FindAll(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return s.mapper.ToResponseList(entities), nil
+}
+
+// GetByID 负责根据 ID 获取单个 {{.EntityName}} 的业务逻辑
+func (s *{{.LowerEntityName}}ServiceImpl) GetByID(ctx context.Context, id {{.PrimaryKey.Type}}) (*dto.{{.EntityName}}Response, error) {
+	entity, err := s.repo.FindByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	return s.mapper.ToResponse(entity), nil
+}
+
+// Update 负责更新 {{.EntityName}} 的业务逻辑
+func (s *{{.LowerEntityName}}ServiceImpl) Update(ctx context.Context, id {{.PrimaryKey.Type}}, req *dto.Update{{.EntityName}}Request) (*dto.{{.EntityName}}Response, error) {
+	entity, err := s.repo.FindByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	s.mapper.UpdateEntityFromDTO(entity, req)
+
+	if err := s.repo.Update(ctx, entity); err != nil {
+		return nil, err
+	}
+
+	return s.mapper.ToResponse(entity), nil
+}
+
+// Delete 负责删除 {{.EntityName}} 的业务逻辑
+func (s *{{.LowerEntityName}}ServiceImpl) Delete(ctx context.Context, id {{.PrimaryKey.Type}}) error {
+	// 在删除前检查实体是否存在，可以提供更明确的错误信息
+	_, err := s.repo.FindByID(ctx, id)
+	if err != nil {
+		return err // 如果未找到，将 gorm.ErrRecordNotFound 传递给上层
+	}
+	return s.repo.Delete(ctx, id)
+}
+{{else}}
+/*
+// ExampleMethod 是一个自定义服务方法的示例
+func (s *{{.LowerEntityName}}ServiceImpl) ExampleMethod(ctx context.Context, id {{.PrimaryKey.Type}}) (*dto.{{.EntityName}}Response, error) {
+	// 在这里实现你的业务逻辑, 例如调用仓储层
+	// _, err := s.repo.ExampleMethod(ctx, "some-arg")
+	return &dto.{{.EntityName}}Response{}, nil
+}
+*/
+{{end}}

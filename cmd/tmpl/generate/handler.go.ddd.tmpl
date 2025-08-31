@@ -1,15 +1,19 @@
 package handler
 
 import (
-    "{{.ProjectModule}}/internal/adapter/dto"
-	"{{.ProjectModule}}/internal/usecase/service"
+	"errors"
+	"{{.ProjectModule}}/internal/application/service"
+	"{{.ProjectModule}}/internal/interfaces/dto"
 	"github.com/gofiber/fiber/v3"
+	"gorm.io/gorm"
 )
 
+// {{.EntityName}}Handler 封装了与 {{.EntityName}} 实体相关的 HTTP 处理器
 type {{.EntityName}}Handler struct {
 	service service.{{.EntityName}}Service
 }
 
+// New{{.EntityName}}Handler 创建一个新的 {{.EntityName}} 处理器
 func New{{.EntityName}}Handler(s service.{{.EntityName}}Service) *{{.EntityName}}Handler {
 	return &{{.EntityName}}Handler{service: s}
 }
@@ -32,8 +36,9 @@ func (h *{{.EntityName}}Handler) Create(ctx fiber.Ctx) error {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "无法解析请求体"})
 	}
 
+	// TODO: 在这里添加请求体验证逻辑 (e.g., using a validator library)
 
-	resp, err := h.service.Create(&req)
+	resp, err := h.service.Create(ctx, &req)
 	if err != nil {
 		// TODO: 根据错误类型返回不同的状态码
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "创建失败"})
@@ -51,7 +56,7 @@ func (h *{{.EntityName}}Handler) Create(ctx fiber.Ctx) error {
 // @Failure      500  {object}  map[string]string
 // @Router       /{{.TableName}} [get]
 func (h *{{.EntityName}}Handler) GetAll(ctx fiber.Ctx) error {
-	resp, err := h.service.GetAll()
+	resp, err := h.service.GetAll(ctx)
 	if err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "获取列表失败"})
 	}
@@ -71,24 +76,24 @@ func (h *{{.EntityName}}Handler) GetAll(ctx fiber.Ctx) error {
 // @Failure      500  {object}  map[string]string
 // @Router       /{{.TableName}}/{id} [get]
 func (h *{{.EntityName}}Handler) GetByID(ctx fiber.Ctx) error {
-    var err error
-	// 注意：这里的 ID 解析需要根据主键类型进行调整
-	// 例如，如果主键是 uint 或 int，可以使用 ctx.ParamsInt("id")
-	// 下面的示例适用于 string 类型的 ID
 	id := ctx.Params("id")
 	if id == "" {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "ID 不能为空"})
 	}
 
-
-	var convertedID {{.PrimaryKey.Type}}
-	// convertedID, err = strconv.ParseUint(id, 10, 64)
+	// TODO: 将字符串 id 转换为 {{.PrimaryKey.Type}} 类型. 例如:
+	// convertedID, err := strconv.ParseUint(id, 10, 64)
 	// if err != nil {
 	// 	 return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "无效的 ID 格式"})
 	// }
-	resp, err := h.service.GetByID(convertedID)
+	var convertedID {{.PrimaryKey.Type}}
+
+	resp, err := h.service.GetByID(ctx, convertedID)
 	if err != nil {
-		return ctx.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "记录未找到"})
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ctx.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "记录未找到"})
+		}
+		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "获取失败"})
 	}
 
 	return ctx.Status(fiber.StatusOK).JSON(resp)
@@ -108,7 +113,6 @@ func (h *{{.EntityName}}Handler) GetByID(ctx fiber.Ctx) error {
 // @Failure      500  {object}  map[string]string
 // @Router       /{{.TableName}}/{id} [put]
 func (h *{{.EntityName}}Handler) Update(ctx fiber.Ctx) error {
-    var err error
 	id := ctx.Params("id")
 	if id == "" {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "ID 不能为空"})
@@ -119,13 +123,14 @@ func (h *{{.EntityName}}Handler) Update(ctx fiber.Ctx) error {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "无法解析请求体"})
 	}
 
+	// TODO: 将字符串 id 转换为 {{.PrimaryKey.Type}} 类型
 	var convertedID {{.PrimaryKey.Type}}
-	// convertedID, err = strconv.ParseUint(id, 10, 64)
-	// if err != nil {
-	// 	 return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "无效的 ID 格式"})
-	// }
-	resp, err := h.service.Update(convertedID, &req)
+
+	resp, err := h.service.Update(ctx, convertedID, &req)
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ctx.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "记录未找到，无法更新"})
+		}
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "更新失败"})
 	}
 
@@ -139,21 +144,22 @@ func (h *{{.EntityName}}Handler) Update(ctx fiber.Ctx) error {
 // @Param        id   path      {{.PrimaryKey.Type}}  true  "{{.EntityName}} ID"
 // @Success      204  {object}  nil
 // @Failure      400  {object}  map[string]string
+// @Failure      404  {object}  map[string]string
 // @Failure      500  {object}  map[string]string
 // @Router       /{{.TableName}}/{id} [delete]
 func (h *{{.EntityName}}Handler) Delete(ctx fiber.Ctx) error {
-    var err error
 	id := ctx.Params("id")
 	if id == "" {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "ID 不能为空"})
 	}
 
+	// TODO: 将字符串 id 转换为 {{.PrimaryKey.Type}} 类型
 	var convertedID {{.PrimaryKey.Type}}
-	// convertedID, err = strconv.ParseUint(id, 10, 64)
-	// if err != nil {
-	// 	 return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "无效的 ID 格式"})
-	// }
-	if err = h.service.Delete(convertedID); err != nil {
+
+	if err := h.service.Delete(ctx, convertedID); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ctx.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "记录未找到，无法删除"})
+		}
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "删除失败"})
 	}
 
