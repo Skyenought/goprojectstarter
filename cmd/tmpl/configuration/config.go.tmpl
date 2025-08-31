@@ -27,6 +27,12 @@ type DatabaseConfig struct {
 	DbName   string `mapstructure:"dbname"`
 }
 
+// LoggerConfig holds logger settings.
+type LoggerConfig struct {
+	Type  string `mapstructure:"type"`
+	Level string `mapstructure:"level"`
+}
+
 // Config is the main configuration struct for the application.
 type Config struct {
 	Server struct {
@@ -35,6 +41,7 @@ type Config struct {
 	TLS      TLSConfig      `mapstructure:"tls"`
 	Database DatabaseConfig `mapstructure:"database"`
 	JWT      JWTConfig      `mapstructure:"jwt"`
+	Logger   LoggerConfig   `mapstructure:"logger"`
 }
 
 // NewConfig loads the configuration from file and environment variables.

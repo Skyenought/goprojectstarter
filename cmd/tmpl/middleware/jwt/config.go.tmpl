@@ -1,0 +1,126 @@
+package jwt
+
+import (
+    "strings"
+
+	"github.com/gofiber/fiber/v3"
+	"github.com/golang-jwt/jwt/v5"
+)
+
+// TokenExtractor 定义了从请求中提取 token 的函数类型
+type TokenExtractor func(c fiber.Ctx) (string, error)
+
+// Config 定义了 JWT 中间件的配置选项
+type Config struct {
+	// Next 定义了一个函数，如果返回 true，则跳过此中间件。
+	// 可选。默认值为 nil。
+	Next func(c fiber.Ctx) bool
+
+	// SigningKey 是用于验证 token 签名的密钥。
+	// 必需。
+	SigningKey []byte
+
+	// KeyFunc 是一个回调函数，允许为每个 token 动态提供验证密钥。
+	// 当设置时，SigningKey 将被忽略。
+	// 可选。默认值为 nil。
+	KeyFunc jwt.Keyfunc
+
+	// TokenLookup 是一个字符串，描述了从请求中提取 token 的位置。
+	// 格式为 "<source>:<name>"，例如 "header:Authorization", "query:token", "cookie:jwt"。
+	// 可选。默认值为 "header:Authorization"。
+	TokenLookup func(c fiber.Ctx) (string, error)
+
+	// SigningMethod 定义了用于签名的算法。
+	// 可选。默认值为 "HS256"。
+	SigningMethod string
+
+	// ContextKey 是用于在 c.Locals 中存储已解码的 JWT Claims 的键名。
+	// 可选。默认值为 "user"。
+	ContextKey string
+
+	// Claims 是一个 jwt.Claims 对象的实例，用于解码 token 的 claims。
+	// 如果提供了这个字段，中间件会将解码后的 claims 绑定到这个结构体实例中。
+	// 可选。默认值为 jwt.MapClaims。
+	Claims jwt.Claims
+
+	// SuccessHandler 是在 JWT 验证成功后调用的函数。
+	// 可选。默认值为 nil。
+	SuccessHandler func(c fiber.Ctx) error
+
+	// ErrorHandler 是在发生错误时调用的函数。
+	// 可选。默认处理函数会发送 401 Unauthorized 响应。
+	ErrorHandler func(c fiber.Ctx, err error) error
+
+	// ParseOptions 允许你传递 jwt.ParserOption
+	// 比如 jwt.WithLeeway(5*time.Second) 来允许5秒的时间偏差
+	ParseOptions []jwt.ParserOption
+}
+
+// configDefault 设置配置的默认值
+func configDefault(config ...Config) Config {
+	var cfg Config
+	if len(config) > 0 {
+		cfg = config[0]
+	}
+
+	if cfg.SigningKey == nil && cfg.KeyFunc == nil {
+		panic("Fiber: JWT middleware requires SigningKey or KeyFunc")
+	}
+
+	if cfg.ContextKey == "" {
+		cfg.ContextKey = defaultContextKey
+	}
+
+	if cfg.TokenLookup == nil {
+		cfg.TokenLookup = fromHeader("Authorization", "Bearer")
+	}
+
+	if cfg.ErrorHandler == nil {
+		cfg.ErrorHandler = func(c fiber.Ctx, err error) error {
+			if err.Error() == "missing or malformed JWT" {
+				return c.Status(fiber.StatusBadRequest).SendString(err.Error())
+			}
+			return c.Status(fiber.StatusUnauthorized).SendString("Invalid or expired JWT")
+		}
+	}
+
+	if cfg.SigningMethod == "" {
+		cfg.SigningMethod = "HS256"
+	}
+
+	return cfg
+}
+
+// fromHeader 从请求头中提取 token
+func fromHeader(header, authScheme string) TokenExtractor {
+	return func(c fiber.Ctx) (string, error) {
+		auth := c.Get(header)
+		l := len(authScheme)
+		if len(auth) > l+1 && strings.EqualFold(auth[:l], authScheme) {
+			return strings.TrimSpace(auth[l+1:]), nil
+		}
+		return "", ErrMissingOrMalformedJWT
+	}
+}
+
+// fromQuery 从 URL 查询参数中提取 token
+func fromQuery(param string) TokenExtractor {
+	return func(c fiber.Ctx) (string, error) {
+		token := c.Query(param)
+		if token == "" {
+			return "", ErrMissingOrMalformedJWT
+		}
+		return token, nil
+	}
+}
+
+// fromCookie 从 cookie 中提取 token
+func fromCookie(name string) TokenExtractor {
+	return func(c fiber.Ctx) (string, error) {
+		token := c.Cookies(name)
+		if token == "" {
+			return "", ErrMissingOrMalformedJWT
+		}
+		return token, nil
+	}
+}

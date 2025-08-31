@@ -16,3 +16,7 @@ database:
   dbname: "{{.AppName}}"
 jwt:
   secret:
+
+logger:
+  type: "zap" # "zap" or "default"
+  level: "info" # "debug", "info", "warn", "error"
