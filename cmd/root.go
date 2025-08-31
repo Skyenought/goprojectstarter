@@ -4,6 +4,7 @@ import (
 	"embed"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"text/template"
 
@@ -58,6 +59,30 @@ func Execute() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+}
+
+func finishProjectCreation(project Project) {
+	// 进入项目目录
+	if err := os.Chdir(project.ProjectModule); err != nil {
+		fmt.Printf("无法进入项目目录 %s: %v\n", project.ProjectModule, err)
+		return
+	}
+	defer os.Chdir("..") // 操作完成后返回上一级目录
+
+	fmt.Println("📦 正在整理依赖 (go mod tidy)...")
+	cmd := exec.Command("go", "mod", "tidy")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		fmt.Printf("   go mod tidy 失败: %v\n", err)
+		fmt.Println("   输出:", string(output))
+	} else {
+		fmt.Println(" ✓ 依赖整理完成。")
+	}
+
+	fmt.Printf("\n 项目 '%s' 初始化成功！\n", project.ProjectModule)
+	fmt.Println("👉 下一步:")
+	fmt.Printf("   1. cd %s\n", project.ProjectModule)
+	// go mod tidy 已经自动执行，所以从提示中移除
+	fmt.Printf("   2. go run ./cmd/%s\n", project.AppName)
 }
 
 func createProject(projectName string) {
@@ -115,11 +140,7 @@ func createProject(projectName string) {
 		}
 	}
 
-	fmt.Printf("\n 项目 '%s' 初始化成功！\n", project.ProjectModule)
-	fmt.Println("👉 下一步:")
-	fmt.Printf("   1. cd %s\n", project.ProjectModule)
-	fmt.Println("   2. go mod tidy")
-	fmt.Printf("   3. go run ./cmd/%s\n", project.AppName)
+	finishProjectCreation(project)
 }
 
 // 新增 createDDDProject 函数
@@ -177,11 +198,7 @@ func createDDDProject(projectName string) {
 		}
 	}
 
-	fmt.Printf("\n DDD 项目 '%s' 初始化成功！\n", project.ProjectModule)
-	fmt.Println("👉 下一步:")
-	fmt.Printf("   1. cd %s\n", project.ProjectModule)
-	fmt.Println("   2. go mod tidy")
-	fmt.Printf("   3. go run ./cmd/%s\n", project.AppName)
+	finishProjectCreation(project)
 }
 
 func createFileFromTemplate(p Project, tmplPath, outputName string) {

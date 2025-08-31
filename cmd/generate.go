@@ -152,8 +152,8 @@ func runGenerate(cmd *cobra.Command, args []string) {
 		}
 	}
 
-	common.FormatImport()
-	common.FormatFile()
+	_ = common.FormatImport()
+	_ = common.FormatFile()
 
 	printNextSteps(info)
 }

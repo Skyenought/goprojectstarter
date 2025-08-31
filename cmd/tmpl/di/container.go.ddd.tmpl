@@ -7,6 +7,7 @@ import (
 	"{{.ProjectModule}}/internal/infrastructure/router"
 	"{{.ProjectModule}}/internal/configuration"
 
+    "github.com/Skyenought/goprojectstarter/pkg/logger"
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v3"
 	"go.uber.org/dig"
@@ -46,6 +47,7 @@ func BuildContainer(config *configuration.Config) (*dig.Container, error) {
 
 	providers := []interface{}{
 		provideFiberApp,
+		provideLogger,
 		provideValidator,
 		persistence.NewDatabase,
 		persistence.Connect,
@@ -77,4 +79,12 @@ func provideFiberApp(validate *validator.Validate) *fiber.App {
 // provideValidator provides a singleton instance of the validator.
 func provideValidator() *validator.Validate {
 	return validator.New()
+}
+
+func provideLogger(config *configuration.Config) (logger.Logger, error) {
+	logCfg := logger.Config{
+		Type:  config.Logger.Type,
+		Level: config.Logger.Level,
+	}
+	return logger.New(logCfg)
 }

@@ -13,9 +13,9 @@
 {{.MapperContent}}
 ```
 ## 用户需求 (USER REQUEST)
-HTTP 方法: {{.HttpVerb}}
-API 路径: {{.FullApiPath}}
-功能描述: {{.UserPrompt}}
+- **HTTP 方法**: {{.HttpVerb}}
+- **API 路径**: {{.FullApiPath}}
+- **功能描述**: {{.UserPrompt}}
 
 ## 任务 (TASK)
 为 '{{.EntityName}}' 实体的新方法 '{{.MethodName}}' 生成 Repository, Service, 和 Handler 层的必要 Go 方法签名和实现骨架，并提供相应的路由注册代码。**同时，根据需要更新 Mapper 文件**。
@@ -141,7 +141,7 @@ Handler 负责处理 HTTP 请求和响应，调用 Service 层来执行业务。
 请注意这是 fiber v3 版本:
     - `ctx.BodyParser(&req)` 已被替换为 `ctx.Bind().JSON(&req)`
     - `ctx *fiber.Ctx` -> `ctx fiber.Ctx`
-    - ctx 直接实现了 `context.Context` 接口，可以直接传递给 Service 层
+    - `ctx` 直接实现了 `context.Context` 接口，可以直接传递给 Service 层
 ```go
 // Update 处理更新 Artist 的请求
 // @Summary      更新 Artist

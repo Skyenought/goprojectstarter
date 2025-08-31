@@ -2,43 +2,36 @@ package cmd
 
 import (
 	"bytes"
-	"context"
 	_ "embed"
 	"encoding/json"
 	"fmt"
-	"github.com/Skyenought/goprojectstarter/pkg/llm/deepseek"
-	"github.com/Skyenought/goprojectstarter/pkg/llm/gemini"
-	"github.com/Skyenought/goprojectstarter/pkg/llm/volc"
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"gopkg.in/yaml.v3"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"text/template"
-	"time"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/Skyenought/goprojectstarter/pkg/common"
-	"github.com/Skyenought/goprojectstarter/pkg/llm"
 	"github.com/spf13/cobra"
 )
 
 var (
 	//go:embed prompt.tmpl
-	promptTemplate  string
-	interactiveMode bool
-	historyMode     bool
-	httpMethod      string
-	apiPath         string
-	userPrompt      string
-	saveToMarkdown  bool
+	promptTemplate   string
+	interactiveMode  bool
+	historyMode      bool
+	fromMarkdownFile string // 新增：用于接收 markdown 文件路径
+	httpMethod       string
+	apiPath          string
+	userPrompt       string
+	saveToMarkdown   bool
 )
 
-// LLMCodeSnippets 定义了从 LLM 期望获得的 JSON 结构
 type LLMCodeSnippets struct {
 	RepoInterfaceMethod string `json:"repo_interface_method"`
 	RepoImplMethod      string `json:"repo_impl_method"`
@@ -46,22 +39,31 @@ type LLMCodeSnippets struct {
 	ServiceImplMethod   string `json:"service_impl_method"`
 	HandlerMethod       string `json:"handler_method"`
 	RouterLine          string `json:"router_line"`
-	MapperFullContent   string `json:"mapper_full_content"` // AI可以修改并返回完整的Mapper文件
+	MapperFullContent   string `json:"mapper_full_content"`
 }
 
 var genApiCmd = &cobra.Command{
 	Use:   "gen-api [EntityName] [MethodName]",
 	Short: "为已存在的实体创建新的 API 接口",
-	Long: `此命令可以为实体自动在 Handler, Service, Repository 层追加新的方法框架, 并注册路由。
-它利用 LLM 根据你的自然语言描述来生成更智能、更贴合需求的代码。
+	Long: `此命令利用 LLM 根据你的自然语言描述，为实体自动生成完整的 API 代码层。
 
-支持三种模式:
-1. 直接模式: goprojectstarter gen-api User PromoteUser --method POST --path /:id/promote -p "提升用户等级，需要一个 'level' 字符串在请求体中"
-2. 交互模式: goprojectstarter gen-api -i (或不带参数)
-3. 历史模式: goprojectstarter gen-api --history`,
+工作流:
+1.  **生成草稿 (可选)**:
+goprojectstarter gen-api User Promote --markdown -p "你的初步想法"
+> 这会生成一个 'gen-api-prompt-User-Promote.md' 文件。
+
+2.  **完善设计**:
+打开生成的.md 文件，仔细修改和完善 '功能描述' 部分。
+
+3.  **执行生成**:
+goprojectstarter gen-api --from-markdown gen-api-prompt-User-Promote.md
+> 工具会读取你完善后的文件，并生成高质量的代码。
+
+同样支持传统的直接模式和交互模式。`,
 	Run: runGenApi,
 }
 
+// ... (genApiRevertCmd struct 不变) ...
 var genApiRevertCmd = &cobra.Command{
 	Use:   "gen-api:revert",
 	Short: "撤销一次由 `gen-api` 生成的操作",
@@ -75,10 +77,11 @@ func init() {
 
 	genApiCmd.Flags().BoolVarP(&interactiveMode, "interactive", "i", false, "启用交互式向导来创建新接口")
 	genApiCmd.Flags().BoolVar(&historyMode, "history", false, "从历史记录中选择并重新执行一次 `gen-api` 操作")
+	genApiCmd.Flags().StringVar(&fromMarkdownFile, "from-markdown", "", "从一个 markdown prompt 文件生成 API")
 	genApiCmd.Flags().StringVar(&httpMethod, "method", "POST", "指定 HTTP 方法 (e.g., GET, POST)")
 	genApiCmd.Flags().StringVar(&apiPath, "path", "", "指定 API 路径 (e.g., /:id/promote)")
 	genApiCmd.Flags().StringVarP(&userPrompt, "prompt", "p", "", "用自然语言描述新 API 的功能、参数和业务流程")
-	genApiCmd.Flags().BoolVar(&saveToMarkdown, "markdown", false, "保存生成的 AI prompt 到本地 markdown 文件用于调试, 不实际调用 LLM")
+	genApiCmd.Flags().BoolVar(&saveToMarkdown, "markdown", false, "将 AI prompt 保存到本地 markdown 文件用于调试或后续使用")
 }
 
 func runGenApi(cmd *cobra.Command, args []string) {
@@ -91,7 +94,10 @@ func runGenApi(cmd *cobra.Command, args []string) {
 	var info common.ApiInfo
 	var err error
 
-	if historyMode {
+	// 优先处理 --from-markdown 模式
+	if fromMarkdownFile != "" {
+		info, userPrompt, err = runFromMarkdownMode(fromMarkdownFile)
+	} else if historyMode {
 		info, err = runHistoryMode()
 	} else if interactiveMode || len(args) == 0 {
 		info, err = runInteractiveMode()
@@ -104,7 +110,7 @@ func runGenApi(cmd *cobra.Command, args []string) {
 	}
 
 	if err != nil {
-		fmt.Printf("❌ 操作已取消: %v\n", err)
+		fmt.Printf("❌ 操作已取消或失败: %v\n", err)
 		return
 	}
 
@@ -138,6 +144,84 @@ func runGenApi(cmd *cobra.Command, args []string) {
 	}
 
 	fmt.Println("\n👉 请检查新生成的代码, 并根据需要微调业务逻辑。")
+}
+
+// runFromMarkdownMode 是新的工作流入口
+func runFromMarkdownMode(filePath string) (common.ApiInfo, string, error) {
+	fmt.Printf("🔍 正在从 Markdown 文件解析任务: %s\n", filePath)
+	content, err := os.ReadFile(filePath)
+	if err != nil {
+		return common.ApiInfo{}, "", fmt.Errorf("读取 markdown 文件失败: %w", err)
+	}
+
+	info, prompt, err := parseMarkdownPrompt(string(content))
+	if err != nil {
+		return common.ApiInfo{}, "", fmt.Errorf("解析 markdown prompt 失败: %w", err)
+	}
+	fmt.Println("   ✓ 解析成功！")
+	return info, prompt, nil
+}
+
+// parseMarkdownPrompt 使用正则表达式从文件中提取信息
+func parseMarkdownPrompt(content string) (common.ApiInfo, string, error) {
+	// 辅助函数，用于安全地从内容中提取匹配项
+	extract := func(pattern string) (string, error) {
+		re := regexp.MustCompile(pattern)
+		matches := re.FindStringSubmatch(content)
+		if len(matches) < 2 {
+			return "", fmt.Errorf("在 markdown 中未找到模式: %s", pattern)
+		}
+		return strings.TrimSpace(matches[1]), nil
+	}
+
+	entityName, err := extract(`为 '(\w+)' 实体的新方法`)
+	if err != nil {
+		return common.ApiInfo{}, "", err
+	}
+	methodName, err := extract(`的新方法 '(\w+)'`)
+	if err != nil {
+		return common.ApiInfo{}, "", err
+	}
+	httpVerb, err := extract(`- \*\*HTTP 方法\*\*: (\w+)`)
+	if err != nil {
+		return common.ApiInfo{}, "", err
+	}
+	fullApiPath, err := extract(`- \*\*API 路径\*\*: (/\S*)`)
+	if err != nil {
+		return common.ApiInfo{}, "", err
+	}
+
+	// 提取多行的功能描述
+	promptStartMarker := "- **功能描述**:"
+	promptEndMarker := "## 操作指令 (INSTRUCTIONS)"
+	startIndex := strings.Index(content, promptStartMarker)
+	if startIndex == -1 {
+		return common.ApiInfo{}, "", fmt.Errorf("在 markdown 中未找到 '功能描述' 标记")
+	}
+	contentAfterStart := content[startIndex+len(promptStartMarker):]
+	endIndex := strings.Index(contentAfterStart, promptEndMarker)
+	if endIndex == -1 {
+		return common.ApiInfo{}, "", fmt.Errorf("在 markdown 中未找到 '操作指令' 标记")
+	}
+	parsedUserPrompt := strings.TrimSpace(contentAfterStart[:endIndex])
+	if parsedUserPrompt == "" {
+		return common.ApiInfo{}, "", fmt.Errorf("markdown 中的 '功能描述' 不能为空")
+	}
+
+	// 从 fullApiPath 推导出 apiPath
+	pathParts := strings.SplitN(strings.TrimPrefix(fullApiPath, "/api/v1/"), "/", 2)
+	if len(pathParts) < 2 {
+		// 允许根路径，例如 /api/v1/login
+		if len(pathParts) == 1 {
+			pathParts = append(pathParts, "") // 添加一个空部分
+		} else {
+			return common.ApiInfo{}, "", fmt.Errorf("无法从路径中解析表名: %s", fullApiPath)
+		}
+	}
+	apiPath := "/" + pathParts[1]
+
+	info, err := buildApiInfo(entityName, methodName, httpVerb, apiPath)
+	return info, parsedUserPrompt, err
 }
 
 func runInteractiveMode() (common.ApiInfo, error) {
@@ -257,7 +341,7 @@ func generateCodeWithLLM(info common.ApiInfo, userPrompt string) (*LLMCodeSnippe
 
 	if saveToMarkdown {
 		filename := fmt.Sprintf("gen-api-prompt-%s-%s.md", info.EntityName, info.MethodName)
-		if err := os.WriteFile(filename, []byte(finalPrompt), 0644); err != nil {
+		if err := os.WriteFile(filename, []byte(finalPrompt), 0o644); err != nil {
 			fmt.Printf("⚠️ 警告：保存 prompt 到 markdown 文件失败: %v\n", err)
 		} else {
 			fmt.Printf("✅ Prompt 已保存至 %s。程序将在此终止。\n", filename)
@@ -265,7 +349,7 @@ func generateCodeWithLLM(info common.ApiInfo, userPrompt string) (*LLMCodeSnippe
 		return nil, nil
 	}
 
-	llmResponse, err := GenerateWithDefaultLLM(finalPrompt)
+	llmResponse, err := common.GenWithDefaultLLM(finalPrompt)
 	if err != nil {
 		return nil, fmt.Errorf("LLM API 调用失败: %w", err)
 	}
@@ -292,10 +376,10 @@ func injectGeneratedCode(info common.ApiInfo, snippets *LLMCodeSnippets) error {
 		mapperDir := "internal/interfaces/dto" // 假设 DDD 结构
 		mapperPath := filepath.Join(mapperDir, common.ToSnakeCase(info.EntityName)+"_mapper.go")
 		fmt.Printf("  -> 正在覆盖/创建 Mapper 文件 %s...\n", mapperPath)
-		if err := os.MkdirAll(filepath.Dir(mapperPath), 0755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(mapperPath), 0o755); err != nil {
 			return fmt.Errorf("创建 Mapper 目录 %s 失败: %w", filepath.Dir(mapperPath), err)
 		}
-		if err := os.WriteFile(mapperPath, []byte(snippets.MapperFullContent), 0644); err != nil {
+		if err := os.WriteFile(mapperPath, []byte(snippets.MapperFullContent), 0o644); err != nil {
 			return fmt.Errorf("写入 Mapper 文件 %s 失败: %w", mapperPath, err)
 		}
 	}
@@ -352,7 +436,11 @@ func ensureRouteGroupExists(routerPath string, info common.ApiInfo) error {
 func appendToFile(filePath, codeSnippet string, info common.ApiInfo, anchorTmplStr string, mode common.InsertionMode) error {
 	content, err := os.ReadFile(filePath)
 	if err != nil {
-		return err
+		if mode != common.AppendToEnd && !os.IsNotExist(err) {
+			return err
+		}
+		// 如果文件不存在，对于 AppendToEnd 模式，我们可以创建一个新文件
+		content = []byte{}
 	}
 	var newContent []byte
 	switch mode {
@@ -554,85 +642,4 @@ func parseCommitMessage(message string) (common.ApiInfo, error) {
 	}
 	apiPath := "/" + pathParts[1]
 	return buildApiInfo(entityName, methodName, httpVerb, apiPath)
-}
-
-type LLMConfig struct {
-	Default   string `yaml:"default"`
-	Providers map[string]struct {
-		Models []string `yaml:"models"`
-	} `yaml:"providers"`
-}
-
-// GenerateWithDefaultLLM 是一个高级辅助函数，它负责：
-// 1. 读取 `.goprojectstarter.yaml` 配置文件。
-// 2. 根据配置中的 `default` 字段确定要使用的 LLM 提供商和模型。
-// 3. 从环境变量中获取对应的 API Key。
-// 4. 初始化选择的 LLM 客户端。
-// 5. 发送 prompt 并返回结果。
-func GenerateWithDefaultLLM(prompt string) (string, error) {
-	// 加载 LLM 配置
-	config, err := loadLLMConfig()
-	if err != nil {
-		return "", fmt.Errorf("无法加载 LLM 配置: %w", err)
-	}
-
-	// 解析默认的提供商和模型
-	parts := strings.Split(config.Default, ":")
-	if len(parts) != 2 {
-		return "", fmt.Errorf("配置文件中 'default' LLM 格式无效 (应为 'provider:model'): %s", config.Default)
-	}
-	provider, model := parts[0], parts[1]
-
-	var client llm.Assistant // 使用顶层 Assistant 接口
-	var apiKey string
-
-	fmt.Printf("   - 使用默认 LLM: %s (%s)\n", provider, model)
-
-	// 根据提供商选择并初始化客户端
-	switch provider {
-	case "gemini":
-		// Gemini 客户端通过环境变量自动读取 API key
-		client, err = gemini.NewClient(gemini.WithModel(model))
-	case "deepseek":
-		apiKey = os.Getenv("DEEPSEEK_API_KEY")
-		if apiKey == "" {
-			return "", fmt.Errorf("环境变量 DEEPSEEK_API_KEY 未设置")
-		}
-		client, err = deepseek.NewClient(apiKey, deepseek.WithModel(model))
-	case "volc":
-		apiKey = os.Getenv("ARK_API_KEY")
-		if apiKey == "" {
-			return "", fmt.Errorf("环境变量 ARK_API_KEY 未设置")
-		}
-		client, err = volc.NewClient(volc.WithModel(model))
-	default:
-		return "", fmt.Errorf("不支持的 LLM 提供商: %s", provider)
-	}
-
-	if err != nil {
-		return "", fmt.Errorf("为 %s 创建 LLM 客户端失败: %w", provider, err)
-	}
-
-	// 为 API 调用设置一个超时上下文
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
-	defer cancel()
-
-	// 使用通用的 Send 方法发送请求
-	return client.Send(ctx, prompt)
-}
-
-// loadLLMConfig 读取并解析 .goprojectstarter.yaml 文件
-func loadLLMConfig() (*LLMConfig, error) {
-	file, err := os.ReadFile(".goprojectstarter.yaml")
-	if err != nil {
-		return nil, err
-	}
-	// 我们只关心文件中的 'llm' 顶级键
-	var config struct {
-		LLM LLMConfig `yaml:"llm"`
-	}
-	if err := yaml.Unmarshal(file, &config); err != nil {
-		return nil, err
-	}
-	return &config.LLM, nil
 }

@@ -3,6 +3,7 @@ package di
 import (
 	"sync"
 
+    "github.com/Skyenought/goprojectstarter/pkg/logger"
 	"{{.ProjectModule}}/internal/adapter/repository"
 	"{{.ProjectModule}}/internal/adapter/router"
 	"{{.ProjectModule}}/internal/configuration"
@@ -50,6 +51,7 @@ func BuildContainer(config *configuration.Config) (*dig.Container, error) {
 	providers := []interface{}{
 		provideFiberApp,
 		provideValidator,
+		provideLogger,
 		repository.NewDatabase,
     	repository.Connect,
 		router.NewRouter,
@@ -81,4 +83,12 @@ func provideFiberApp(validate *validator.Validate) *fiber.App {
 // provideValidator provides a singleton instance of the validator.
 func provideValidator() *validator.Validate {
 	return validator.New()
+}
+
+func provideLogger(config *configuration.Config) (logger.Logger, error) {
+	logCfg := logger.Config{
+		Type:  config.Logger.Type,
+		Level: config.Logger.Level,
+	}
+	return logger.New(logCfg)
 }
