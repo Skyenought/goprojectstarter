@@ -91,15 +91,19 @@ func (l *ZapLogger) Fatal(args ...interface{}) { l.sugaredLogger.Fatal(args...) 
 func (l *ZapLogger) Debugf(template string, args ...interface{}) {
 	l.sugaredLogger.Debugf(template, args...)
 }
+
 func (l *ZapLogger) Infof(template string, args ...interface{}) {
 	l.sugaredLogger.Infof(template, args...)
 }
+
 func (l *ZapLogger) Warnf(template string, args ...interface{}) {
 	l.sugaredLogger.Warnf(template, args...)
 }
+
 func (l *ZapLogger) Errorf(template string, args ...interface{}) {
 	l.sugaredLogger.Errorf(template, args...)
 }
+
 func (l *ZapLogger) Fatalf(template string, args ...interface{}) {
 	l.sugaredLogger.Fatalf(template, args...)
 }
@@ -120,30 +124,39 @@ func newDefaultLogger() *DefaultLogger {
 func (l *DefaultLogger) Debug(args ...interface{}) {
 	l.logger.Println(append([]interface{}{"[DEBUG]"}, args...)...)
 }
+
 func (l *DefaultLogger) Info(args ...interface{}) {
 	l.logger.Println(append([]interface{}{"[INFO]"}, args...)...)
 }
+
 func (l *DefaultLogger) Warn(args ...interface{}) {
 	l.logger.Println(append([]interface{}{"[WARN]"}, args...)...)
 }
+
 func (l *DefaultLogger) Error(args ...interface{}) {
 	l.logger.Println(append([]interface{}{"[ERROR]"}, args...)...)
 }
+
 func (l *DefaultLogger) Fatal(args ...interface{}) {
 	l.logger.Fatal(append([]interface{}{"[FATAL]"}, args...)...)
 }
+
 func (l *DefaultLogger) Debugf(template string, args ...interface{}) {
 	l.printf("[DEBUG]", template, args...)
 }
+
 func (l *DefaultLogger) Infof(template string, args ...interface{}) {
 	l.printf("[INFO]", template, args...)
 }
+
 func (l *DefaultLogger) Warnf(template string, args ...interface{}) {
 	l.printf("[WARN]", template, args...)
 }
+
 func (l *DefaultLogger) Errorf(template string, args ...interface{}) {
 	l.printf("[ERROR]", template, args...)
 }
+
 func (l *DefaultLogger) Fatalf(template string, args ...interface{}) {
 	l.fatalf("[FATAL]", template, args...)
 }
@@ -151,6 +164,7 @@ func (l *DefaultLogger) Fatalf(template string, args ...interface{}) {
 func (l *DefaultLogger) printf(prefix, template string, args ...interface{}) {
 	l.logger.Printf(prefix+" "+template, args...)
 }
+
 func (l *DefaultLogger) fatalf(prefix, template string, args ...interface{}) {
 	l.logger.Fatalf(prefix+" "+template, args...)
 }

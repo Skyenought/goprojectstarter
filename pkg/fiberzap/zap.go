@@ -24,8 +24,8 @@ func New(config ...Config) fiber.Handler {
 		errHandler fiber.ErrorHandler
 	)
 
-	var errPadding = 15
-	var latencyEnabled = contains("latency", cfg.Fields)
+	errPadding := 15
+	latencyEnabled := contains("latency", cfg.Fields)
 
 	// put ignore uri into a map for faster match
 	skipURIs := make(map[string]struct{})
