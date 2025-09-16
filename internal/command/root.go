@@ -51,10 +51,13 @@ func init() {
 	if err != nil {
 		fmt.Printf("警告：加载 .env 文件时出错: %v\n", err)
 	}
+	rootCmd.Flags().Bool("version", false, "Print the version number and exit")
 	rootCmd.Flags().BoolVar(&dddMode, "ddd", false, "使用领域驱动设计 (DDD) 结构初始化项目")
 }
 
-func Execute() {
+func Execute(version string) {
+	rootCmd.Version = version
+
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
