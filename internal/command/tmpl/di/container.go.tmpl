@@ -1,0 +1,102 @@
+package di
+
+import (
+	"sync"
+
+    "github.com/Skyenought/goprojectstarter/pkg/logger"
+	"{{.ProjectModule}}/internal/adapter/repository"
+	"{{.ProjectModule}}/internal/adapter/router"
+	"{{.ProjectModule}}/internal/configuration"
+
+	"github.com/go-playground/validator/v10"
+	"github.com/gofiber/fiber/v3"
+	"go.uber.org/dig"
+)
+
+// structValidator is a custom validator that implements fiber.StructValidator
+type structValidator struct {
+	once     sync.Once
+	validate *validator.Validate
+}
+
+func (v *structValidator) Engine() any {
+	v.once.Do(func() {
+		v.validate = validator.New()
+		v.validate.SetTagName("binding")
+	})
+	return v.validate
+}
+
+func (v *structValidator) ValidateStruct(out any) error {
+	if v.validate == nil {
+		return fiber.ErrInternalServerError
+	}
+	return v.validate.Struct(out)
+}
+
+// BuildContainer now only takes config as a parameter.
+func BuildContainer(config *configuration.Config) (*dig.Container, error) {
+	container := dig.New()
+
+	// Provide the main config instance.
+	if err := container.Provide(func() *configuration.Config { return config }); err != nil {
+		return nil, err
+	}
+
+	// Create a new provider that extracts the dbType from the config.
+	if err := container.Provide(provideDbType); err != nil {
+		return nil, err
+	}
+
+	providers := []interface{}{
+		provideFiberApp,
+		provideValidator,
+		provideLogger,
+		repository.NewDatabase,
+    	repository.Connect,
+		router.NewRouter,
+
+		// [GENERATOR ANCHOR] - Don't remove this comment!
+	}
+
+	for _, p := range providers {
+		if err := container.Provide(p); err != nil {
+			return nil, err
+		}
+	}
+
+	return container, nil
+}
+
+// provideDbType is a provider that extracts the database type from the configuration.
+func provideDbType(config *configuration.Config) string {
+	return config.Database.Type
+}
+
+// provideFiberApp creates a new Fiber app and sets up the custom struct validator.
+func provideFiberApp(validate *validator.Validate) *fiber.App {
+	return fiber.New(fiber.Config{
+		StructValidator: &structValidator{validate: validate},
+	})
+}
+
+// provideValidator provides a singleton instance of the validator.
+func provideValidator() *validator.Validate {
+	return validator.New()
+}
+
+func provideLogger(config *configuration.Config) (logger.Logger, error) {
+	logCfg := logger.Config{
+		Type:  config.Logger.Type,
+		Level: config.Logger.Level,
+		File: logger.FileConfig{
+			Enabled:    config.Logger.File.Enabled,
+			Path:       config.Logger.File.Path,
+			MaxSize:    config.Logger.File.MaxSize,
+			MaxAge:     config.Logger.File.MaxAge,
+			MaxBackups: config.Logger.File.MaxBackups,
+			Compress:   config.Logger.File.Compress,
+		},
+	}
+	return logger.New(logCfg)
+}

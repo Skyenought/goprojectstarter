@@ -1,0 +1,73 @@
+package service
+
+import (
+    "{{.ProjectModule}}/internal/adapter/dto"
+	"{{.ProjectModule}}/internal/domain/entity"
+	"{{.ProjectModule}}/internal/domain/ports"
+)
+
+// {{.EntityName}}Service defines the business logic interface for {{.EntityName}}.
+type {{.EntityName}}Service interface {
+{{if not .NoCrudMethods}}
+	Create(req *dto.Create{{.EntityName}}Request) (*dto.{{.EntityName}}Response, error)
+	GetAll() ([]dto.{{.EntityName}}Response, error)
+	GetByID(id {{.PrimaryKey.Type}}) (*dto.{{.EntityName}}Response, error)
+	Update(id {{.PrimaryKey.Type}}, req *dto.Update{{.EntityName}}Request) (*dto.{{.EntityName}}Response, error)
+	Delete(id {{.PrimaryKey.Type}}) error
+{{else}}
+    // ExampleMethod(ctx context.Context, id {{.PrimaryKey.Type}}) (*dto.{{.EntityName}}Response, error)
+{{end}}
+}
+
+type {{.LowerEntityName}}ServiceImpl struct {
+	repo ports.{{.EntityName}}Repository
+}
+
+// New{{.EntityName}}Service creates a new {{.EntityName}} service.
+func New{{.EntityName}}Service(repo ports.{{.EntityName}}Repository) {{.EntityName}}Service {
+	return &{{.LowerEntityName}}ServiceImpl{repo: repo}
+}
+
+{{if not .NoCrudMethods}}
+// Create handles the logic for creating a new {{.EntityName}}.
+// NOTE: This is a placeholder implementation.
+func (s *{{.LowerEntityName}}ServiceImpl) Create(req *dto.Create{{.EntityName}}Request) (*dto.{{.EntityName}}Response, error) {
+	modelEntity := &entity.{{.EntityName}}{
+		// TODO: Map fields from req (*dto.Create{{.EntityName}}Request) to modelEntity (*entity.{{.EntityName}})
+	}
+
+	if err := s.repo.Create(modelEntity); err != nil {
+		return nil, err
+	}
+
+	resp := &dto.{{.EntityName}}Response{
+		// TODO: Map fields from modelEntity (*entity.{{.EntityName}}) to resp (*dto.{{.EntityName}}Response)
+	}
+	return resp, nil
+}
+
+func (s *{{.LowerEntityName}}ServiceImpl) GetAll() ([]dto.{{.EntityName}}Response, error) {
+	return []dto.{{.EntityName}}Response{}, nil
+}
+
+func (s *{{.LowerEntityName}}ServiceImpl) GetByID(id {{.PrimaryKey.Type}}) (*dto.{{.EntityName}}Response, error) {
+	return nil, nil
+}
+
+func (s *{{.LowerEntityName}}ServiceImpl) Update(id {{.PrimaryKey.Type}}, req *dto.Update{{.EntityName}}Request) (*dto.{{.EntityName}}Response, error) {
+	return nil, nil
+}
+
+func (s *{{.LowerEntityName}}ServiceImpl) Delete(id {{.PrimaryKey.Type}}) error {
+	return s.repo.Delete(id)
+}
+{{else}}
+/*
+// ExampleMethod 是一个自定义服务方法的示例
+func (s *{{.LowerEntityName}}ServiceImpl) ExampleMethod(ctx context.Context, id {{.PrimaryKey.Type}}) (*dto.{{.EntityName}}Response, error) {
+	// 在这里实现你的业务逻辑, 例如调用仓储层
+	// _, err := s.repo.ExampleMethod(ctx, "some-arg")
+	return &dto.{{.EntityName}}Response{}, nil
+}
+*/
+{{end}}

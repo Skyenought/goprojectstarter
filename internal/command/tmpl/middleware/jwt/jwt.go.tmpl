@@ -1,0 +1,113 @@
+package jwt
+
+import (
+    "errors"
+	"fmt"
+	"reflect"
+	"strings"
+
+	"github.com/gofiber/fiber/v3"
+	"github.com/golang-jwt/jwt/v5"
+)
+
+var (
+	// ErrMissingOrMalformedJWT is returned when the JWT is missing or malformed.
+	ErrMissingOrMalformedJWT = errors.New("missing or malformed JWT")
+
+	// ErrInvalidOrExpiredJWT is returned when the JWT is invalid or expired.
+	ErrInvalidOrExpiredJWT = errors.New("invalid or expired JWT")
+)
+
+const (
+	// 定义默认的上下文键名
+	defaultContextKey = "user"
+)
+
+func New(config Config) fiber.Handler {
+	// 设置默认配置
+	cfg := configDefault(config)
+
+	// 返回中间件处理函数
+	return func(c fiber.Ctx) error {
+		// 如果 Next 函数返回 true，则跳过此中间件
+		if cfg.Next != nil && cfg.Next(c) {
+			return c.Next()
+		}
+
+		// 从请求中提取 token
+		token, err := cfg.TokenLookup(c)
+		if err != nil {
+			return cfg.ErrorHandler(c, err)
+		}
+
+		// 解析和验证 JWT
+		parsedToken, err := jwt.Parse(token, func(t *jwt.Token) (interface{}, error) {
+			// 验证签名算法
+			if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok && cfg.SigningMethod != "" && t.Method.Alg() != cfg.SigningMethod {
+				return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
+			}
+
+			// 如果 SigningKey 是动态的，则调用 KeyFunc
+			if cfg.KeyFunc != nil {
+				return cfg.KeyFunc(t)
+			}
+
+			// 使用静态的 SigningKey
+			return cfg.SigningKey, nil
+		}, cfg.ParseOptions...)
+		if err != nil {
+			return cfg.ErrorHandler(c, fmt.Errorf("%w: %w", ErrInvalidOrExpiredJWT, err))
+		}
+
+		if cfg.SuccessHandler != nil {
+			return cfg.SuccessHandler(c)
+		}
+
+		// 将解析后的 token 存储在 c.Locals 中
+		claims, ok := parsedToken.Claims.(jwt.MapClaims)
+		if !ok {
+			return cfg.ErrorHandler(c, ErrInvalidOrExpiredJWT)
+		}
+
+		// 如果指定了 Claims，则使用它来绑定
+		if cfg.Claims != nil {
+			// 创建一个新的 Claims 实例
+			claimsStruct := reflect.New(reflect.TypeOf(cfg.Claims).Elem()).Interface()
+			err = mapToStruct(claims, claimsStruct)
+			if err != nil {
+				return cfg.ErrorHandler(c, ErrInvalidOrExpiredJWT)
+			}
+			c.Locals(cfg.ContextKey, claimsStruct)
+		} else {
+			// 否则直接存储 MapClaims
+			c.Locals(cfg.ContextKey, claims)
+		}
+
+		return c.Next()
+	}
+}
+
+func mapToStruct(data map[string]interface{}, result interface{}) error {
+	val := reflect.ValueOf(result).Elem()
+	typ := val.Type()
+	for i := 0; i < typ.NumField(); i++ {
+		field := typ.Field(i)
+		fieldName := field.Tag.Get("json")
+		if fieldName == "" {
+			fieldName = field.Name
+		}
+		if value, ok := data[strings.Split(fieldName, ",")[0]]; ok {
+			fieldVal := val.Field(i)
+			if fieldVal.CanSet() {
+				// 类型转换可能需要更复杂的逻辑
+				dataVal := reflect.ValueOf(value)
+				if dataVal.Type().AssignableTo(fieldVal.Type()) {
+					fieldVal.Set(dataVal)
+				} else if dataVal.CanConvert(fieldVal.Type()) {
+					fieldVal.Set(dataVal.Convert(fieldVal.Type()))
+				}
+			}
+		}
+	}
+	return nil
+}

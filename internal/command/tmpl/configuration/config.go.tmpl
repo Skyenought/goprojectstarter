@@ -1,0 +1,74 @@
+package configuration
+
+import (
+	"fmt"
+	"github.com/spf13/viper"
+)
+
+// TLSConfig holds TLS specific settings.
+type TLSConfig struct {
+	Enabled  bool   `mapstructure:"enabled"`
+	CertFile string `mapstructure:"certFile"`
+	KeyFile  string `mapstructure:"keyFile"`
+}
+
+type JWTConfig struct {
+	Secret string `mapstructure:"secret"`
+}
+
+// DatabaseConfig holds database connection settings.
+type DatabaseConfig struct {
+	Type     string `mapstructure:"type"` 
+	DSN      string `mapstructure:"dsn"`
+	Host     string `mapstructure:"host"`
+	Port     int    `mapstructure:"port"`
+	User     string `mapstructure:"user"`
+	Password string `mapstructure:"password"`
+	DbName   string `mapstructure:"dbname"`
+	TimeoutSeconds int    `mapstructure:"timeoutSeconds"`
+}
+
+type FileConfig struct {
+	Enabled    bool   `mapstructure:"enabled"`
+	Path       string `mapstructure:"path"`
+	MaxSize    int    `mapstructure:"max_size"`
+	MaxAge     int    `mapstructure:"max_age"`
+	MaxBackups int    `mapstructure:"max_backups"`
+	Compress   bool   `mapstructure:"compress"`
+}
+
+// LoggerConfig holds logger settings.
+type LoggerConfig struct {
+	Type  string     `mapstructure:"type"`
+	Level string     `mapstructure:"level"`
+	File  FileConfig `mapstructure:"file"` 
+}
+
+// Config is the main configuration struct for the application.
+type Config struct {
+	Server struct {
+		Port int `mapstructure:"port"`
+	} `mapstructure:"server"`
+	TLS      TLSConfig      `mapstructure:"tls"`
+	Database DatabaseConfig `mapstructure:"database"`
+	JWT      JWTConfig      `mapstructure:"jwt"`
+	Logger   LoggerConfig   `mapstructure:"logger"`
+}
+
+// NewConfig loads the configuration from file and environment variables.
+func NewConfig(filePath string) *Config {
+	vp := viper.New()
+	vp.SetConfigFile(filePath)
+	vp.AutomaticEnv()
+
+	if err := vp.ReadInConfig(); err != nil {
+		panic(fmt.Errorf("fatal error reading config file: %s, error: %w", filePath, err))
+	}
+
+	var config Config
+	if err := vp.Unmarshal(&config); err != nil {
+		panic(fmt.Errorf("unable to decode config into struct, %w", err))
+	}
+
+	return &config
+}

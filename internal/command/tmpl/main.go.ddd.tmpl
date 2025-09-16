@@ -1,0 +1,59 @@
+package main
+
+import (
+	"crypto/tls"
+	"flag"
+	"fmt"
+	"log"
+
+	"{{.ProjectModule}}/internal/configuration"
+	"{{.ProjectModule}}/internal/di"
+	"{{.ProjectModule}}/internal/infrastructure/router"
+)
+
+func main() {
+	configPath := flag.String("c", "config.yaml", "path to the configuration file")
+	flag.Parse()
+
+	config := configuration.NewConfig(*configPath)
+	container, err := di.BuildContainer(config)
+	if err != nil {
+		log.Fatalf("构建 DI 容器失败: %v", err)
+	}
+
+	err = container.Invoke(func(r *router.Router) {
+		r.SetupRoutes()
+		app := r.App
+		serverAddr := fmt.Sprintf(":%d", config.Server.Port)
+
+		if config.TLS.Enabled {
+			if config.TLS.CertFile == "" || config.TLS.KeyFile == "" {
+				log.Fatal("TLS 已启用, 但 certFile 或 keyFile 未在配置中指定。")
+			}
+
+			cert, err := tls.LoadX509KeyPair(config.TLS.CertFile, config.TLS.KeyFile)
+			if err != nil {
+				log.Fatalf("加载 TLS 证书失败: %v", err)
+			}
+
+			tlsConfig := &tls.Config{
+				Certificates: []tls.Certificate{cert},
+				MinVersion:   tls.VersionTLS12,
+			}
+
+			ln, err := tls.Listen("tcp", serverAddr, tlsConfig)
+			if err != nil {
+				log.Fatalf("创建 TLS 监听器失败: %v", err)
+			}
+
+			log.Fatal(app.Listener(ln))
+
+		} else {
+			log.Fatal(app.Listen(serverAddr))
+		}
+	})
+
+	if err != nil {
+		log.Fatalf("启动应用失败 (from Invoke): %v", err)
+	}
+}

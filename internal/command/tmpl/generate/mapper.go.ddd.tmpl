@@ -1,0 +1,45 @@
+package dto
+
+import "{{.ProjectModule}}/internal/domain/entity"
+
+// {{.EntityName}}Mapper 负责 DTO 和实体之间的转换
+type {{.EntityName}}Mapper struct{}
+
+// ToEntity 将创建请求的 DTO 转换为实体。
+func (m *{{.EntityName}}Mapper) ToEntity(req *Create{{.EntityName}}Request) *entity.{{.EntityName}} {
+    return &entity.{{.EntityName}}{
+        // TODO: 在这里实现从 req 到 entity 的字段映射
+        // 例如: Name: req.Name,
+    }
+}
+
+// UpdateEntityFromDTO 使用更新请求的 DTO 来更新一个已存在的实体。
+func (m *{{.EntityName}}Mapper) UpdateEntityFromDTO(e *entity.{{.EntityName}}, req *Update{{.EntityName}}Request) {
+    // TODO: 在这里实现从 req 更新到 entity 的字段映射
+    // 例如: if req.Name != "" { e.Name = req.Name }
+}
+
+// ToResponse 将单个实体转换为响应 DTO。
+func (m *{{.EntityName}}Mapper) ToResponse(e *entity.{{.EntityName}}) *{{.EntityName}}Response {
+    if e == nil {
+        return nil
+    }
+    return &{{.EntityName}}Response{
+        {{- range .Fields}}
+        {{.Name}}: e.{{.Name}},
+        {{- end}}
+    }
+}
+
+// ToResponseList 将实体切片转换为响应 DTO 切片。
+func (m *{{.EntityName}}Mapper) ToResponseList(entities []entity.{{.EntityName}}) []{{.EntityName}}Response {
+    responses := make([]{{.EntityName}}Response, len(entities))
+    for i, e := range entities {
+        // 注意：这里需要通过指针传递给 ToResponse 方法
+        resp := m.ToResponse(&e)
+        if resp != nil {
+            responses[i] = *resp
+        }
+    }
+    return responses
+}

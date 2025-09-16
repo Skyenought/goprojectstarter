@@ -1,0 +1,139 @@
+package repository
+
+import (
+	"fmt"
+	"log"
+	"net/url"
+	"os"
+	"strings"
+	"time"
+
+	"{{.ProjectModule}}/internal/configuration"
+
+	"gorm.io/driver/mysql"
+	"gorm.io/driver/postgres"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
+)
+
+// Database 接口定义了数据库连接方法
+type Database interface {
+	Connect(config *configuration.Config, gormLogger gormlogger.Interface) (*gorm.DB, error)
+}
+
+// postgresDatabase 实现了 Database 接口，用于 PostgreSQL
+type postgresDatabase struct{}
+
+func (p *postgresDatabase) Connect(config *configuration.Config, gormLogger gormlogger.Interface) (*gorm.DB, error) {
+	var dsn string
+	if config.Database.DSN != "" {
+		// 如果提供了 DSN，则将其解析为 GORM 所需的格式。
+		parsedURL, err := url.Parse(config.Database.DSN)
+		if err != nil {
+			return nil, fmt.Errorf("无效的数据库 DSN: %w", err)
+		}
+
+		password, _ := parsedURL.User.Password()
+		var gormDSNParts []string
+		gormDSNParts = append(gormDSNParts, "host="+parsedURL.Hostname())
+		gormDSNParts = append(gormDSNParts, "user="+parsedURL.User.Username())
+		gormDSNParts = append(gormDSNParts, "password="+password)
+		gormDSNParts = append(gormDSNParts, "dbname="+strings.TrimPrefix(parsedURL.Path, "/"))
+		if parsedURL.Port() != "" {
+			gormDSNParts = append(gormDSNParts, "port="+parsedURL.Port())
+		}
+
+		// 附加原始 DSN 中的所有查询参数 (例如 sslmode)。
+		for key, values := range parsedURL.Query() {
+			gormDSNParts = append(gormDSNParts, key+"="+values[0])
+		}
+
+		dsn = strings.Join(gormDSNParts, " ")
+	} else {
+		// 回退到从单个字段构造 DSN。
+		dsn = fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=disable TimeZone=Asia/Shanghai",
+			config.Database.Host, config.Database.User, config.Database.Password, config.Database.DbName, config.Database.Port)
+	}
+	return gorm.Open(postgres.Open(dsn), &gorm.Config{Logger: gormLogger})
+}
+
+// mysqlDatabase 实现了 Database 接口，用于 MySQL
+type mysqlDatabase struct{}
+
+func (m *mysqlDatabase) Connect(config *configuration.Config, gormLogger gormlogger.Interface) (*gorm.DB, error) {
+	dsn := config.Database.DSN
+	if dsn == "" {
+		dsn = fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
+			config.Database.User,
+			config.Database.Password,
+			config.Database.Host,
+			config.Database.Port,
+			config.Database.DbName,
+		)
+	}
+	return gorm.Open(mysql.Open(dsn), &gorm.Config{Logger: gormLogger})
+}
+
+// sqliteDatabase 实现了 Database 接口，用于 SQLite
+type sqliteDatabase struct{}
+
+func (s *sqliteDatabase) Connect(config *configuration.Config, gormLogger gormlogger.Interface) (*gorm.DB, error) {
+	// 对于 SQLite，DSN 就是数据库文件路径。如果提供了 DSN，就直接使用它。
+	// 否则，我们使用 dbname 字段作为数据库文件名来构建路径。
+	dbPath := config.Database.DSN
+	if dbPath == "" {
+		dbPath = fmt.Sprintf("%s.db", config.Database.DbName)
+	}
+	return gorm.Open(sqlite.Open(dbPath), &gorm.Config{Logger: gormLogger})
+}
+
+// NewDatabase 是一个工厂函数，根据配置返回相应的数据库接口实现
+// DI 容器会自动调用这个函数来创建 Database 接口的实例
+func NewDatabase(dbType string) (Database, error) {
+	switch dbType {
+	case "psql":
+		return &postgresDatabase{}, nil
+	case "mysql":
+		return &mysqlDatabase{}, nil
+	case "sqlite":
+		return &sqliteDatabase{}, nil
+	default:
+		return nil, fmt.Errorf("不支持的数据库类型: %s", dbType)
+	}
+}
+
+// Connect 是一个专门用于执行数据库连接的函数
+// DI 容器会先调用 NewDatabase，然后将结果传入此函数，最终得到 *gorm.DB 连接实例
+func Connect(dbImpl Database, config *configuration.Config, gormLogger gormlogger.Interface) (*gorm.DB, error) {
+	timeout := time.Duration(5) * time.Second
+	if timeout <= 0 {
+		timeout = 15 * time.Second
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	type dbResult struct {
+		db  *gorm.DB
+		err error
+	}
+	done := make(chan dbResult, 1)
+
+	go func() {
+		log.Printf("正在尝试连接数据库 (超时时间: %s)...", timeout)
+		db, err := dbImpl.Connect(config, gormLogger)
+		done <- dbResult{db: db, err: err}
+	}()
+
+	select {
+	case <-ctx.Done():
+		return nil, fmt.Errorf("数据库连接超时 (%s)", timeout)
+	case result := <-done:
+		if result.err != nil {
+			return nil, fmt.Errorf("连接数据库失败: %w", result.err)
+		}
+		log.Println("✅ 数据库连接成功!")
+		return result.db, nil
+	}
+}

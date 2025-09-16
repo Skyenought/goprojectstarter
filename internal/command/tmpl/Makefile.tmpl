@@ -1,0 +1,114 @@
+# Makefile for {{.AppName}} (Hybrid for Windows PowerShell & Unix Bash)
+
+# --- Project Information ---
+APP_NAME={{.AppName}}
+SRC_PATH=./cmd/$(APP_NAME)/main.go
+OUTPUT_DIR=./bin
+
+# --- Go parameters ---
+GOCMD=go
+GOBUILD=$(GOCMD) build
+GOCLEAN=$(GOCMD) clean
+GOTEST=$(GOCMD) test
+
+# --- Build flags ---
+LDFLAGS = -s -w
+# 可以在编译时通过 `make build LDFLAGS="-X main.Version=1.0.0"` 来注入版本信息
+GO_BUILD_FLAGS = -ldflags="$(LDFLAGS)"
+
+# --- OS-Specific Definitions (核心逻辑) ---
+ifeq ($(OS),Windows_NT)
+    # --- Windows (PowerShell) Configuration ---
+    SHELL := pwsh.exe
+    .SHELLFLAGS := -NoProfile -Command
+
+    # 定义 PowerShell 命令
+    MKDIR_CMD = New-Item -Path '$(OUTPUT_DIR)' -ItemType Directory -Force
+    RM_CMD = if (Test-Path '$(OUTPUT_DIR)') { Remove-Item -Path '$(OUTPUT_DIR)' -Recurse -Force }
+    RUN_CMD = & '$(BINARY_PATH)'
+
+    # 定义 PowerShell 环境变量设置语法
+    ENV_PREFIX_LINUX = $$env:CGO_ENABLED='0'; $$env:GOOS='linux'; $$env:GOARCH='amd64';
+    ENV_PREFIX_WINDOWS = $$env:CGO_ENABLED='0'; $$env:GOOS='windows'; $$env:GOARCH='amd64';
+
+    # 定义文件后缀
+    EXT = .exe
+else
+    # --- Unix/Linux/macOS (Bash/Sh) Configuration ---
+    # 使用默认 shell (sh/bash)
+
+    # 定义 Unix 命令
+    MKDIR_CMD = mkdir -p '$(OUTPUT_DIR)'
+    RM_CMD = rm -rf '$(OUTPUT_DIR)'
+    RUN_CMD = ./$(BINARY_PATH)
+
+    # 定义 Unix 环境变量设置语法
+    ENV_PREFIX_LINUX = CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+    ENV_PREFIX_WINDOWS = CGO_ENABLED=0 GOOS=windows GOARCH=amd64
+
+    # 定义文件后缀
+    EXT =
+endif
+
+# --- Binary names ---
+BINARY_PATH=$(OUTPUT_DIR)/$(APP_NAME)$(EXT)
+BINARY_UNIX=$(OUTPUT_DIR)/$(APP_NAME)-linux
+BINARY_WINDOWS=$(OUTPUT_DIR)/$(APP_NAME)-windows.exe
+
+# Phony targets (声明这些目标不是文件名)
+.PHONY: all build run test clean build-linux build-windows help
+
+# Default target executed when you just run "make"
+all: build
+
+# Build the binary for the current operating system (平台无关)
+build:
+	@echo ">> Building for current OS..."
+	@$(MKDIR_CMD)
+	$(GOBUILD) $(GO_BUILD_FLAGS) -o '$(BINARY_PATH)' $(SRC_PATH)
+	@echo ">> Build complete: $(BINARY_PATH)"
+
+# Run the application (平台无关)
+run: build
+	@echo ">> Running the application..."
+	@$(RUN_CMD) -c config.yaml
+
+# Run tests (平台无关)
+test:
+	@echo ">> Running tests..."
+	$(GOTEST) -v ./...
+
+# Clean up build artifacts (平台无关)
+clean:
+	@echo ">> Cleaning up..."
+	@-$(RM_CMD)
+	@$(GOCLEAN)
+	@echo ">> Cleanup complete."
+
+# Cross-compile for Linux (amd64) (平台无关)
+build-linux:
+	@echo ">> Building for Linux (amd64)..."
+	@$(MKDIR_CMD)
+	$(ENV_PREFIX_LINUX) $(GOBUILD) $(GO_BUILD_FLAGS) -o '$(BINARY_UNIX)' $(SRC_PATH)
+	@echo ">> Build complete: $(BINARY_UNIX)"
+
+# Cross-compile for Windows (amd64) (平台无关)
+build-windows:
+	@echo ">> Building for Windows (amd64)..."
+	@$(MKDIR_CMD)
+	$(ENV_PREFIX_WINDOWS) $(GOBUILD) $(GO_BUILD_FLAGS) -o '$(BINARY_WINDOWS)' $(SRC_PATH)
+	@echo ">> Build complete: $(BINARY_WINDOWS)"
+
+# Help target to display available commands
+help:
+	@echo "Usage: make <target>"
+	@echo ""
+	@echo "Targets:"
+	@echo "  all           Build the binary for the current OS (default)."
+	@echo "  build         Build the binary for the current OS."
+	@echo "  run           Build and run the application."
+	@echo "  test          Run all tests."
+	@echo "  clean         Remove build artifacts."
+	@echo "  build-linux   Cross-compile the binary for Linux (amd64)."
+	@echo "  build-windows Cross-compile the binary for Windows (amd64)."
+	@echo "  help          Show this help message."

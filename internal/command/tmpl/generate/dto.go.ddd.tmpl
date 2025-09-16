@@ -1,0 +1,21 @@
+package dto
+
+// {{.EntityName}}Response 定义了返回的 {{.EntityName}} 对象结构。
+// 注意：关联对象（如果有）将作为其对应的 Response 类型嵌入。
+type {{.EntityName}}Response struct {
+	{{- range .Fields}}
+	{{.Name}} {{.DTOType}} `json:"{{.LowerName}}"`
+	{{- end}}
+}
+
+// Create{{.EntityName}}Request 定义了创建新 {{.EntityName}} 的载荷。
+type Create{{.EntityName}}Request struct {
+	// TODO: 在这里根据您的需求添加用于创建的字段
+	// 例如: Name string `json:"name" binding:"required"`
+}
+
+// Update{{.EntityName}}Request 定义了更新 {{.EntityName}} 的载荷。
+type Update{{.EntityName}}Request struct {
+	// TODO: 在这里根据您的需求添加用于更新的字段
+	// 例如: Name string `json:"name"`
+}

@@ -1,0 +1,30 @@
+server:
+  port: 8080
+
+tls:
+  enabled: false
+  certFile: "path/to/your/cert.pem" # Public certificate file
+  keyFile: "path/to/your/key.pem"
+
+database:
+  type: "psql" # Supported types: psql, mysql, sqlite
+  dsn: ""
+  host: "localhost"
+  port: 5432
+  user: "root"
+  password: "password"
+  dbname: "{{.AppName}}"
+  timeoutSeconds: 5
+jwt:
+  secret:
+
+logger:
+  type: "zap" # "zap" or "default"
+  level: "info" # "debug", "info", "warn", "error"
+  file:
+    enabled: true
+    path: "logs/app.log"
+    max_size: 20
+    max_age: 14
+    max_backups: 5
+    compress: true
