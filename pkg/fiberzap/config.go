@@ -68,6 +68,8 @@ type Config struct {
 	//
 	// Optional. Default: {zapcore.ErrorLevel, zapcore.WarnLevel, zapcore.InfoLevel}
 	Levels []zapcore.Level
+
+	DisableCaller bool
 }
 
 // Use zap.NewProduction() as default logging instance.

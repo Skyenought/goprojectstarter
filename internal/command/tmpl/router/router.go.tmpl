@@ -5,7 +5,6 @@ import (
 	"github.com/Skyenought/goprojectstarter/pkg/logger"
 	"github.com/gofiber/fiber/v3"
 	defaultLogger "github.com/gofiber/fiber/v3/middleware/logger"
-	"go.uber.org/zap"
 )
 
 // Router 结构体用于接收依赖
@@ -23,22 +22,23 @@ func NewRouter(app *fiber.App, log logger.Logger) *Router {
 }
 
 func (r *Router) SetupRoutes() {
-	// 定义一个 zapLogger 接口，用于安全地获取底层的 *zap.Logger
-	type zapLogger interface {
-		Raw() *zap.Logger
-	}
+	rawZapLogger := logger.Raw()
 
-	// 检查注入的 logger 是否为 zap logger
-	if z, ok := r.Log.(zapLogger); ok {
+	if rawZapLogger != nil {
 		r.App.Use(fiberzap.New(fiberzap.Config{
-			Logger: z.Raw(),
+			Logger:        rawZapLogger,
+			DisableCaller: true, // 禁用默认的 caller，以提高性能
+			Fields: []string{ // 自定义要记录的字段
+				"ip", "latency", "status", "method", "url", "route", "error",
+			},
 		}))
-		r.Log.Info("使用 Zap Logger 作为请求日志中间件")
+		logger.Info("使用 Zap Logger 作为请求日志中间件")
 	} else {
+		logger.Warn("Zap logger 未初始化, 使用 Fiber 默认 Logger (已重定向到全局 logger)")
 		r.App.Use(defaultLogger.New(defaultLogger.Config{
-			DisableColors: true,
+			Stream: &logger.LogWriter{},
+			Format: defaultLogger.JSONFormat, // 使用 JSON 格式进行记录
 		}))
-		r.Log.Info("使用 Fiber 默认 Logger 作为请求日志中间件")
 	}
 
 	r.App.Get("/health", func(c fiber.Ctx) error {

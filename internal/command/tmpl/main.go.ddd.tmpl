@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log"
 
+    "github.com/Skyenought/goprojectstarter/pkg/logger"
+    fiberlog "github.com/gofiber/fiber/v3/log"
 	"{{.ProjectModule}}/internal/configuration"
 	"{{.ProjectModule}}/internal/di"
 	"{{.ProjectModule}}/internal/infrastructure/router"
@@ -16,6 +18,19 @@ func main() {
 	flag.Parse()
 
 	config := configuration.NewConfig(*configPath)
+    logger.Init(logger.Config{
+    	Type:  config.Logger.Type,
+    	Level: config.Logger.Level,
+    	File: logger.FileConfig{
+    		Enabled:    config.Logger.File.Enabled,
+    		Path:       config.Logger.File.Path,
+    		MaxSize:    config.Logger.File.MaxSize,
+    		MaxAge:     config.Logger.File.MaxAge,
+    		MaxBackups: config.Logger.File.MaxBackups,
+    		Compress:   config.Logger.File.Compress,
+    	},
+    })
+    fiberlog.SetLogger(logger.NewFiberLogAdapter())
 	container, err := di.BuildContainer(config)
 	if err != nil {
 		log.Fatalf("构建 DI 容器失败: %v", err)

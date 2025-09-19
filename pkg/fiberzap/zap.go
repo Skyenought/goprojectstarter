@@ -24,6 +24,16 @@ func New(config ...Config) fiber.Handler {
 		errHandler fiber.ErrorHandler
 	)
 
+	var loggerToUse *zap.Logger
+	if cfg.DisableCaller {
+		// 如果需要禁用 caller，我们就地创建一个不带 zap.AddCaller() 的新实例。
+		// 重要的是，我们复用了原 logger 的 "Core"，这样日志的输出目的地、级别等都保持一致。
+		loggerToUse = zap.New(cfg.Logger.Core())
+	} else {
+		// 否则，直接使用用户传入的 logger
+		loggerToUse = cfg.Logger
+	}
+
 	errPadding := 15
 	latencyEnabled := contains("latency", cfg.Fields)
 
@@ -103,7 +113,7 @@ func New(config ...Config) fiber.Handler {
 			messageIndex = len(cfg.Messages) - 1
 		}
 
-		ce := cfg.Logger.Check(cfg.Levels[levelIndex], cfg.Messages[messageIndex])
+		ce := loggerToUse.Check(cfg.Levels[levelIndex], cfg.Messages[messageIndex])
 		if ce == nil {
 			return nil
 		}
